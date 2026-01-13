@@ -1,0 +1,7 @@
+.claude/
+.svelte-kit/
+.wrangler/
+wrangler-local-state/
+dist/
+node_modules/
+SPEC.md
