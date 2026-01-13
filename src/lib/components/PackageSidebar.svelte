@@ -169,6 +169,7 @@
   .name-input {
     flex: 1;
     min-width: 80px;
+    height: 28px;
   }
 
   .version-picker {
@@ -177,12 +178,14 @@
 
   .version-btn {
     min-width: 60px;
-    padding: 6px 8px;
+    padding: 5px 8px;
     font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
+    border: 1px solid var(--accent-color);
+    height: 28px;
   }
 
   .version-dropdown {
@@ -225,6 +228,7 @@
 
   .add-btn {
     padding: 6px 12px;
+    height: 28px;
   }
 
   .version-error {
