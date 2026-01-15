@@ -18,6 +18,7 @@
 	let isResizingConsole = $state(false);
 	let isResizingSidebar = $state(false);
 	let isResizingBoth = $state(false);
+	let showMobilePackages = $state(false);
 
 	onMount(() => {
 		initTheme();
@@ -69,7 +70,10 @@
 	function handleKeydown(e: KeyboardEvent) {
 		const isMeta = e.metaKey || e.ctrlKey;
 
-		if (isMeta && e.key === "Enter") {
+		if (e.key === "Escape" && showMobilePackages) {
+			e.preventDefault();
+			showMobilePackages = false;
+		} else if (isMeta && e.key === "Enter") {
 			e.preventDefault();
 			if ($containerState.status === "ready") handleRun();
 		} else if (isMeta && e.key === ".") {
@@ -112,6 +116,10 @@
 		isResizingSidebar = false;
 		isResizingBoth = false;
 	}
+
+	function toggleMobilePackages() {
+		showMobilePackages = !showMobilePackages;
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} onmousemove={handleMouseMove} onmouseup={handleMouseUp} />
@@ -124,6 +132,7 @@
 		onshare={handleShare}
 		theme={$theme}
 		ontoggletheme={toggleTheme}
+		ontogglepackages={toggleMobilePackages}
 	/>
 
 	<div class="main">
@@ -131,7 +140,9 @@
 			<Editor bind:value={code} />
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="resize-handle-v" onmousedown={startResizeSidebar}></div>
-			<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} width={sidebarWidth} />
+			<div class="sidebar-wrapper">
+				<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} width={sidebarWidth} />
+			</div>
 		</div>
 
 		<div class="resize-row">
@@ -145,6 +156,15 @@
 			<Console bind:this={consoleRef} />
 		</div>
 	</div>
+
+	{#if showMobilePackages}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div class="mobile-overlay" onclick={toggleMobilePackages}></div>
+		<div class="mobile-packages">
+			<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} />
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -217,5 +237,58 @@
 
 	.resize-handle-v:hover {
 		background-color: var(--accent-color);
+	}
+
+	.sidebar-wrapper {
+		display: contents;
+	}
+
+	.mobile-overlay {
+		display: none;
+	}
+
+	.mobile-packages {
+		display: none;
+	}
+
+	@media (max-width: 768px) {
+		.sidebar-wrapper {
+			display: none;
+		}
+
+		.resize-handle-v,
+		.resize-handle-corner {
+			display: none;
+		}
+
+		.resize-handle-h {
+			width: 100%;
+		}
+
+		.mobile-overlay {
+			display: block;
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.5);
+			z-index: 100;
+		}
+
+		.mobile-packages {
+			display: block;
+			position: fixed;
+			top: 0;
+			right: 0;
+			bottom: 0;
+			width: min(300px, 80vw);
+			z-index: 101;
+			background: var(--bg-secondary);
+			box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+		}
+
+		.mobile-packages :global(.sidebar) {
+			width: 100% !important;
+			height: 100%;
+			border-left: none;
+		}
 	}
 </style>
