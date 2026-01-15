@@ -7,7 +7,7 @@
 	import { containerState, runCode, stopExecution } from "$lib/utils/webcontainer";
 	import { packages, installPackage, removePackage } from "$lib/stores/packages";
 	import { theme, initTheme, toggleTheme } from "$lib/stores/theme";
-	import { encodeShareUrl, decodeShareUrl, updateUrlHash } from "$lib/utils/sharing";
+	import { encodeShareUrl, decodeShareUrl, updateUrlHash, parsePackagesFromUrl } from "$lib/utils/sharing";
 
 	let code = $state(`console.log('Hello, world!')`);
 	let hashUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -29,6 +29,9 @@
 				decoded.packages.forEach((pkg) => installPackage(pkg.name, pkg.version));
 			}
 		}
+
+		const urlPackages = parsePackagesFromUrl();
+		urlPackages.forEach((pkg) => installPackage(pkg.name, pkg.version));
 
 		return () => {
 			if (hashUpdateTimeout) clearTimeout(hashUpdateTimeout);

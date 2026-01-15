@@ -19,14 +19,29 @@ export function encodeShareData(code: string, packages: Package[]): string {
   return btoa(encodeURIComponent(JSON.stringify(data)))
 }
 
+function buildPackageParams(packages: Package[]): string {
+  const installed = packages.filter(p => p.status === 'installed')
+  if (installed.length === 0) return ''
+
+  const params = new URLSearchParams()
+  for (const pkg of installed) {
+    params.append('pkg', `${pkg.name}@${pkg.version}`)
+  }
+  return params.toString()
+}
+
 export function encodeShareUrl(code: string, packages: Package[]): string {
   const encoded = encodeShareData(code, packages)
-  return `${window.location.origin}${window.location.pathname}#${encoded}`
+  const pkgParams = buildPackageParams(packages)
+  const query = pkgParams ? `?${pkgParams}` : ''
+  return `${window.location.origin}${window.location.pathname}${query}#${encoded}`
 }
 
 export function updateUrlHash(code: string, packages: Package[]): void {
   const encoded = encodeShareData(code, packages)
-  history.replaceState(null, '', `#${encoded}`)
+  const pkgParams = buildPackageParams(packages)
+  const query = pkgParams ? `?${pkgParams}` : ''
+  history.replaceState(null, '', `${query}#${encoded}`)
 }
 
 export function decodeShareUrl(): ShareData | null {
@@ -39,4 +54,17 @@ export function decodeShareUrl(): ShareData | null {
   } catch {
     return null
   }
+}
+
+export function parsePackagesFromUrl(): { name: string; version: string }[] {
+  const params = new URLSearchParams(window.location.search)
+  const pkgParams = params.getAll('pkg')
+
+  return pkgParams.map(pkg => {
+    const atIndex = pkg.lastIndexOf('@')
+    if (atIndex > 0) {
+      return { name: pkg.slice(0, atIndex), version: pkg.slice(atIndex + 1) }
+    }
+    return { name: pkg, version: 'latest' }
+  })
 }
