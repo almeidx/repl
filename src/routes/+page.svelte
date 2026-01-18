@@ -20,6 +20,8 @@
 	let isResizingBoth = $state(false);
 	let showMobilePackages = $state(false);
 
+	const isResizing = $derived(isResizingConsole || isResizingSidebar || isResizingBoth);
+
 	onMount(() => {
 		initTheme();
 
@@ -124,7 +126,12 @@
 
 <svelte:window onkeydown={handleKeydown} onmousemove={handleMouseMove} onmouseup={handleMouseUp} />
 
-<div class="app" class:resizing={isResizingConsole || isResizingSidebar || isResizingBoth}>
+<div
+	class="flex flex-col h-screen bg-bg-primary"
+	class:cursor-row-resize={isResizing}
+	class:select-none={isResizing}
+	class:resizing={isResizing}
+>
 	<Toolbar
 		state={$containerState}
 		onrun={handleRun}
@@ -135,24 +142,34 @@
 		ontogglepackages={toggleMobilePackages}
 	/>
 
-	<div class="main">
-		<div class="editor-area">
+	<div class="flex flex-col flex-1 overflow-hidden">
+		<div class="flex flex-1 min-h-0">
 			<Editor bind:value={code} />
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="resize-handle-v" onmousedown={startResizeSidebar}></div>
-			<div class="sidebar-wrapper">
+			<div
+				class="w-1 bg-border cursor-col-resize shrink-0 hover:bg-accent hidden md:block"
+				onmousedown={startResizeSidebar}
+			></div>
+			<div class="hidden md:contents">
 				<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} width={sidebarWidth} />
 			</div>
 		</div>
 
-		<div class="resize-row">
+		<div class="flex shrink-0">
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="resize-handle-h" onmousedown={startResizeConsole}></div>
+			<div
+				class="h-1 bg-border cursor-row-resize flex-1 hover:bg-accent"
+				onmousedown={startResizeConsole}
+			></div>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="resize-handle-corner" onmousedown={startResizeBoth} style="width: {sidebarWidth + 4}px"></div>
+			<div
+				class="h-1 bg-border cursor-nwse-resize shrink-0 hover:bg-accent hidden md:block"
+				style="width: {sidebarWidth + 4}px"
+				onmousedown={startResizeBoth}
+			></div>
 		</div>
 
-		<div class="console-area" style="height: {consoleHeight}px">
+		<div class="min-h-[50px]" style="height: {consoleHeight}px">
 			<Console bind:this={consoleRef} />
 		</div>
 	</div>
@@ -160,135 +177,15 @@
 	{#if showMobilePackages}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class="mobile-overlay" onclick={toggleMobilePackages}></div>
-		<div class="mobile-packages">
+		<div class="fixed inset-0 bg-black/50 z-[100] md:hidden" onclick={toggleMobilePackages}></div>
+		<div class="fixed top-0 right-0 bottom-0 w-[min(300px,80vw)] z-[101] bg-bg-secondary shadow-[-2px_0_8px_rgba(0,0,0,0.2)] md:hidden">
 			<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} />
 		</div>
 	{/if}
 </div>
 
 <style>
-	.app {
-		display: flex;
-		flex-direction: column;
-		height: 100vh;
-		background-color: var(--bg-primary);
-	}
-
-	.app.resizing {
-		cursor: row-resize;
-		user-select: none;
-	}
-
-	.app.resizing :global(*) {
+	.resizing :global(*) {
 		pointer-events: none;
-	}
-
-	.main {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		overflow: hidden;
-	}
-
-	.editor-area {
-		display: flex;
-		flex: 1;
-		min-height: 0;
-	}
-
-	.console-area {
-		min-height: 50px;
-	}
-
-	.resize-row {
-		display: flex;
-		flex-shrink: 0;
-	}
-
-	.resize-handle-h {
-		height: 4px;
-		background-color: var(--border-color);
-		cursor: row-resize;
-		flex: 1;
-	}
-
-	.resize-handle-h:hover {
-		background-color: var(--accent-color);
-	}
-
-	.resize-handle-corner {
-		height: 4px;
-		background-color: var(--border-color);
-		cursor: nwse-resize;
-		flex-shrink: 0;
-	}
-
-	.resize-handle-corner:hover {
-		background-color: var(--accent-color);
-	}
-
-	.resize-handle-v {
-		width: 4px;
-		background-color: var(--border-color);
-		cursor: col-resize;
-		flex-shrink: 0;
-	}
-
-	.resize-handle-v:hover {
-		background-color: var(--accent-color);
-	}
-
-	.sidebar-wrapper {
-		display: contents;
-	}
-
-	.mobile-overlay {
-		display: none;
-	}
-
-	.mobile-packages {
-		display: none;
-	}
-
-	@media (max-width: 768px) {
-		.sidebar-wrapper {
-			display: none;
-		}
-
-		.resize-handle-v,
-		.resize-handle-corner {
-			display: none;
-		}
-
-		.resize-handle-h {
-			width: 100%;
-		}
-
-		.mobile-overlay {
-			display: block;
-			position: fixed;
-			inset: 0;
-			background: rgba(0, 0, 0, 0.5);
-			z-index: 100;
-		}
-
-		.mobile-packages {
-			display: block;
-			position: fixed;
-			top: 0;
-			right: 0;
-			bottom: 0;
-			width: min(300px, 80vw);
-			z-index: 101;
-			background: var(--bg-secondary);
-			box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
-		}
-
-		.mobile-packages :global(.sidebar) {
-			width: 100% !important;
-			height: 100%;
-			border-left: none;
-		}
 	}
 </style>

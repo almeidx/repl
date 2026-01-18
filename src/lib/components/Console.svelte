@@ -75,16 +75,4 @@
 	}
 </script>
 
-<div class="console-container" bind:this={container}></div>
-
-<style>
-	.console-container {
-		height: 100%;
-		padding: 8px;
-		background-color: var(--bg-primary);
-	}
-
-	.console-container :global(.xterm) {
-		height: 100%;
-	}
-</style>
+<div class="h-full p-2 bg-bg-primary [&_.xterm]:h-full" bind:this={container}></div>

@@ -93,12 +93,4 @@
   }
 </script>
 
-<div class="editor-container" bind:this={container}></div>
-
-<style>
-  .editor-container {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-  }
-</style>
+<div class="flex-1 min-w-0 h-full" bind:this={container}></div>

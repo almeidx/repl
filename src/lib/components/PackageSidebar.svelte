@@ -65,27 +65,27 @@
 	}
 </script>
 
-<div class="sidebar" style="width: {width}px">
-	<div class="header">Packages</div>
+<div class="sidebar min-w-[150px] shrink-0 bg-bg-secondary border-l border-border flex flex-col overflow-hidden" style="width: {width}px">
+	<div class="px-3 py-2 font-medium border-b border-border text-text-secondary text-[11px] uppercase tracking-wider">Packages</div>
 
-	<form class="add-form" onsubmit={handleSubmit}>
+	<form class="flex flex-wrap gap-1 p-2 border-b border-border" onsubmit={handleSubmit}>
 		<input
 			type="text"
 			bind:value={packageName}
 			oninput={handleNameChange}
 			placeholder="Package name"
-			class="name-input"
+			class="flex-1 min-w-[80px] h-7"
 		/>
-		<div class="version-picker">
+		<div class="relative">
 			<button
 				type="button"
-				class="version-btn"
+				class="min-w-[60px] px-2 py-1 text-xs flex items-center justify-center gap-1 border border-accent h-7"
 				onclick={handleVersionClick}
 				disabled={!packageName.trim() || loadingVersions}
 				title={selectedVersion ? `Version: ${selectedVersion}` : "Select version (optional)"}
 			>
 				{#if loadingVersions}
-					<span class="btn-spinner"></span>
+					<span class="size-2.5 border-2 border-transparent border-t-current rounded-full animate-spin"></span>
 				{:else if selectedVersion}
 					{selectedVersion}
 				{:else}
@@ -93,11 +93,12 @@
 				{/if}
 			</button>
 			{#if showVersionPicker && versions.length > 0}
-				<div class="version-dropdown">
+				<div class="absolute top-full left-0 right-0 min-w-[100px] max-h-[200px] overflow-y-auto bg-bg-primary border border-border rounded shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] mt-0.5">
 					<button
 						type="button"
-						class="version-option"
-						class:selected={!selectedVersion}
+						class="block w-full px-2 py-1.5 text-left bg-transparent border-none rounded-none text-xs cursor-pointer text-text-primary hover:bg-bg-tertiary"
+						class:bg-accent={!selectedVersion}
+						class:text-white={!selectedVersion}
 						onclick={() => selectVersion("")}
 					>
 						latest
@@ -105,8 +106,9 @@
 					{#each versions.slice(0, 50) as version}
 						<button
 							type="button"
-							class="version-option"
-							class:selected={selectedVersion === version}
+							class="block w-full px-2 py-1.5 text-left bg-transparent border-none rounded-none text-xs cursor-pointer text-text-primary hover:bg-bg-tertiary"
+							class:bg-accent={selectedVersion === version}
+							class:text-white={selectedVersion === version}
 							onclick={() => selectVersion(version)}
 						>
 							{version}
@@ -115,197 +117,29 @@
 				</div>
 			{/if}
 		</div>
-		<button type="submit" class="add-btn" disabled={!packageName.trim()}>Add</button>
+		<button type="submit" class="px-3 h-7" disabled={!packageName.trim()}>Add</button>
 	</form>
 
 	{#if versionError}
-		<div class="version-error">{versionError}</div>
+		<div class="px-2 py-1.5 text-[11px] text-error bg-error/10">{versionError}</div>
 	{/if}
 
-	<div class="package-list">
+	<div class="flex-1 overflow-y-auto">
 		{#each packages as pkg (pkg.name)}
-			<div class="package" class:error={pkg.status === "error"}>
-				<span class="pkg-name">{pkg.name}</span>
+			<div class="group flex items-center px-3 py-1.5 gap-1 border-b border-border {pkg.status === 'error' ? 'bg-error/10' : ''}"
+			>
+				<span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{pkg.name}</span>
 				{#if pkg.status === "installing"}
-					<span class="pkg-spinner"></span>
+					<span class="size-3 border-2 border-border border-t-accent rounded-full animate-spin"></span>
 				{:else}
-					<span class="pkg-version">@{pkg.version}</span>
+					<span class="text-text-secondary text-[11px]">@{pkg.version}</span>
 				{/if}
-				<button class="remove-btn" onclick={() => onremove(pkg.name)} title="Remove">×</button>
+				<button
+					class="bg-transparent px-1.5 py-0.5 text-base leading-none opacity-0 group-hover:opacity-100 transition-opacity hover:bg-error"
+					onclick={() => onremove(pkg.name)}
+					title="Remove"
+				>×</button>
 			</div>
 		{/each}
 	</div>
 </div>
-
-<style>
-	.sidebar {
-		min-width: 150px;
-		flex-shrink: 0;
-		background-color: var(--bg-secondary);
-		border-left: 1px solid var(--border-color);
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-	}
-
-	.header {
-		padding: 8px 12px;
-		font-weight: 500;
-		border-bottom: 1px solid var(--border-color);
-		color: var(--text-secondary);
-		font-size: 11px;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-	}
-
-	.add-form {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px;
-		padding: 8px;
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.name-input {
-		flex: 1;
-		min-width: 80px;
-		height: 28px;
-	}
-
-	.version-picker {
-		position: relative;
-	}
-
-	.version-btn {
-		min-width: 60px;
-		padding: 5px 8px;
-		font-size: 12px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 4px;
-		border: 1px solid var(--accent-color);
-		height: 28px;
-	}
-
-	.version-dropdown {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		right: 0;
-		min-width: 100px;
-		max-height: 200px;
-		overflow-y: auto;
-		background-color: var(--bg-primary);
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-		z-index: 100;
-		margin-top: 2px;
-	}
-
-	.version-option {
-		display: block;
-		width: 100%;
-		padding: 6px 8px;
-		text-align: left;
-		background: transparent;
-		border: none;
-		border-radius: 0;
-		font-size: 12px;
-		cursor: pointer;
-		color: var(--text-primary);
-	}
-
-	.version-option:hover {
-		background-color: var(--bg-tertiary);
-	}
-
-	.version-option.selected {
-		background-color: var(--accent-color);
-		color: white;
-	}
-
-	.add-btn {
-		padding: 6px 12px;
-		height: 28px;
-	}
-
-	.version-error {
-		padding: 6px 8px;
-		font-size: 11px;
-		color: var(--error-color);
-		background-color: rgba(241, 76, 76, 0.1);
-	}
-
-	.btn-spinner {
-		width: 10px;
-		height: 10px;
-		border: 2px solid transparent;
-		border-top-color: currentColor;
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
-
-	.package-list {
-		flex: 1;
-		overflow-y: auto;
-	}
-
-	.package {
-		display: flex;
-		align-items: center;
-		padding: 6px 12px;
-		gap: 4px;
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.package.error {
-		background-color: rgba(241, 76, 76, 0.1);
-	}
-
-	.pkg-name {
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.pkg-version {
-		color: var(--text-secondary);
-		font-size: 11px;
-	}
-
-	.pkg-spinner {
-		width: 12px;
-		height: 12px;
-		border: 2px solid var(--border-color);
-		border-top-color: var(--accent-color);
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.remove-btn {
-		background: transparent;
-		padding: 2px 6px;
-		font-size: 16px;
-		line-height: 1;
-		opacity: 0;
-		transition: opacity 0.15s;
-	}
-
-	.package:hover .remove-btn {
-		opacity: 1;
-	}
-
-	.remove-btn:hover {
-		background-color: var(--error-color);
-	}
-</style>
