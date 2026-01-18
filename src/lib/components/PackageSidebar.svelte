@@ -93,7 +93,7 @@
 				{/if}
 			</button>
 			{#if showVersionPicker && versions.length > 0}
-				<div class="absolute top-full left-0 right-0 min-w-[100px] max-h-[200px] overflow-y-auto bg-bg-primary border border-border rounded shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] mt-0.5">
+				<div class="absolute top-full right-0 min-w-[180px] max-h-[200px] overflow-y-auto bg-bg-primary border border-border rounded shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] mt-0.5">
 					<button
 						type="button"
 						class="block w-full px-2 py-1.5 text-left bg-transparent border-none rounded-none text-xs cursor-pointer text-text-primary hover:bg-bg-tertiary"
