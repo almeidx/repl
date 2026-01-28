@@ -72,4 +72,4 @@ pnpm run deploy
 
 ## License
 
-[MIT](LICENSE.md)
+[GNU AGPLv3](LICENSE)
