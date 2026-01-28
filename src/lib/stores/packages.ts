@@ -11,11 +11,15 @@ export const packages = writable<Package[]>([])
 
 export async function installPackage(name: string, version: string = 'latest') {
   const current = get(packages)
-  if (current.some(p => p.name === name)) {
-    return
-  }
+  const existing = current.find(p => p.name === name)
 
-  packages.update(p => [...p, { name, version, status: 'installing' }])
+  if (existing) {
+    packages.update(p =>
+      p.map(pkg => pkg.name === name ? { ...pkg, version, status: 'installing' } : pkg)
+    )
+  } else {
+    packages.update(p => [...p, { name, version, status: 'installing' }])
+  }
 
   try {
     const installedVersion = await installPackageInContainer(name, version)
