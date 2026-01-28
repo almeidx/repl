@@ -77,7 +77,8 @@
 			showMobilePackages = false;
 		} else if (isMeta && e.key === "Enter") {
 			e.preventDefault();
-			if ($containerState.status === "ready") handleRun();
+			const status = $containerState.status;
+			if (status === "ready" || status === "idle") handleRun();
 		} else if (isMeta && e.key === ".") {
 			e.preventDefault();
 			handleStop();
