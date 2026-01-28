@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { theme } from '$lib/stores/theme'
+  import { packages, type Package } from '$lib/stores/packages'
+  import { fetchPackageTypes } from '$lib/utils/types'
   import { get } from 'svelte/store'
 
   interface Props {
@@ -16,6 +18,9 @@
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let monaco: any = null
   let unsubscribeTheme: (() => void) | null = null
+  let unsubscribePackages: (() => void) | null = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const typeDisposables = new Map<string, any>()
 
   onMount(async () => {
     monaco = await loadMonaco()
@@ -61,11 +66,41 @@
         monaco.editor.setTheme(t === 'dark' ? 'vs-dark' : 'vs')
       }
     })
+
+    unsubscribePackages = packages.subscribe(pkgs => {
+      if (monaco) syncPackageTypes(pkgs)
+    })
   })
+
+  async function syncPackageTypes(pkgs: Package[]) {
+    const installedNames = new Set(pkgs.filter(p => p.status === 'installed').map(p => p.name))
+
+    for (const name of typeDisposables.keys()) {
+      if (!installedNames.has(name)) {
+        typeDisposables.get(name)?.dispose()
+        typeDisposables.delete(name)
+      }
+    }
+
+    for (const pkg of pkgs) {
+      if (pkg.status === 'installed' && !typeDisposables.has(pkg.name)) {
+        const types = await fetchPackageTypes(pkg.name, pkg.version)
+        if (types && monaco) {
+          const disposable = monaco.languages.typescript.typescriptDefaults.addExtraLib(
+            types,
+            `file:///node_modules/${pkg.name}/index.d.ts`
+          )
+          typeDisposables.set(pkg.name, disposable)
+        }
+      }
+    }
+  }
 
   onDestroy(() => {
     editor?.dispose()
     unsubscribeTheme?.()
+    unsubscribePackages?.()
+    typeDisposables.forEach(d => d.dispose())
   })
 
   $effect(() => {
