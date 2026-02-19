@@ -23,12 +23,12 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.1.18",
     "@webcontainer/api": "^1.6.1",
-    "svelte": "^5.51.2",
+    "svelte": "^5.51.3",
     "svelte-check": "^4.4.0",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
-    "wrangler": "^4.65.0"
+    "wrangler": "^4.66.0"
   },
-  "packageManager": "pnpm@10.29.3"
+  "packageManager": "pnpm@10.30.0"
 }
