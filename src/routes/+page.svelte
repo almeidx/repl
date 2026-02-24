@@ -14,6 +14,7 @@
 	let code = $state(`console.log('Hello, world!')`);
 	let hashUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
 	let consoleRef: Console | null = $state(null);
+	let pendingConsoleOutput = $state<string[]>([]);
 
 	let consoleHeight = $state(200);
 	let sidebarWidth = $state(260);
@@ -64,10 +65,34 @@
 		}, 500);
 	});
 
+	$effect(() => {
+		if (!consoleRef || pendingConsoleOutput.length === 0) return;
+
+		for (const chunk of pendingConsoleOutput) {
+			consoleRef.write(chunk);
+		}
+		pendingConsoleOutput = [];
+	});
+
+	function writeToConsole(data: string) {
+		if (consoleRef) {
+			consoleRef.write(data);
+			return;
+		}
+		pendingConsoleOutput = [...pendingConsoleOutput, data];
+	}
+
+	function clearConsole() {
+		if (consoleRef) {
+			consoleRef.clear();
+		}
+		pendingConsoleOutput = [];
+	}
+
 	function handleRun() {
-		consoleRef?.clear();
-		void runCode(code, (data) => consoleRef?.write(data)).catch((e) => {
-			consoleRef?.write(`\n\x1b[31mError: ${e instanceof Error ? e.message : "Unknown error"}\x1b[0m\n`);
+		clearConsole();
+		void runCode(code, writeToConsole).catch((e) => {
+			writeToConsole(`\n\x1b[31mError: ${e instanceof Error ? e.message : "Unknown error"}\x1b[0m\n`);
 		});
 	}
 
@@ -81,7 +106,7 @@
 	}
 
 	function handleClearConsole() {
-		consoleRef?.clear();
+		clearConsole();
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
