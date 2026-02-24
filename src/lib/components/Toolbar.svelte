@@ -8,11 +8,12 @@
 		onrun: () => void;
 		onstop: () => void;
 		onshare: () => void;
+		sharestatus?: string | null;
 		ontoggletheme: () => void;
 		ontogglepackages?: () => void;
 	}
 
-	let { state, theme, onrun, onstop, onshare, ontoggletheme, ontogglepackages }: Props = $props();
+	let { state, theme, onrun, onstop, onshare, sharestatus = null, ontoggletheme, ontogglepackages }: Props = $props();
 
 	const isIdle = $derived(state.status === "idle");
 	const isBooting = $derived(state.status === "booting");
@@ -47,6 +48,10 @@
 	</div>
 
 	<div class="flex items-center gap-2">
+		<div class="hidden sm:block min-w-[130px] text-right text-[11px] text-text-secondary" role="status" aria-live="polite">
+			{sharestatus ?? ""}
+		</div>
+		<span class="sr-only" role="status" aria-live="polite">{sharestatus ?? ""}</span>
 		{#if ontogglepackages}
 			<button class="bg-transparent px-2 py-1.5 text-base flex items-center justify-center text-text-primary rounded hover:bg-bg-tertiary md:hidden" onclick={ontogglepackages} title="Packages">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

@@ -4,8 +4,8 @@
 
 	interface Props {
 		packages: Package[];
-		oninstall: (name: string, version: string) => void;
-		onremove: (name: string) => void;
+		oninstall: (name: string, version: string) => Promise<void> | void;
+		onremove: (name: string) => Promise<void> | void;
 		width?: number;
 	}
 
@@ -17,6 +17,17 @@
 	let showVersionPicker = $state(false);
 	let loadingVersions = $state(false);
 	let versionError = $state<string | null>(null);
+	const installingCount = $derived(packages.filter((pkg) => pkg.status === "installing").length);
+	const errorCount = $derived(packages.filter((pkg) => pkg.status === "error").length);
+	const packageStatusMessage = $derived.by(() => {
+		if (installingCount > 0) {
+			return `Installing ${installingCount} package${installingCount === 1 ? "" : "s"}...`;
+		}
+		if (errorCount > 0) {
+			return `${errorCount} package${errorCount === 1 ? "" : "s"} failed.`;
+		}
+		return null;
+	});
 
 	async function handleVersionClick() {
 		if (!packageName.trim()) return;
@@ -124,6 +135,12 @@
 		<div class="px-2 py-1.5 text-[11px] text-error bg-error/10">{versionError}</div>
 	{/if}
 
+	{#if packageStatusMessage}
+		<div class="px-2 py-1.5 text-[11px] text-text-secondary border-b border-border" role="status" aria-live="polite">
+			{packageStatusMessage}
+		</div>
+	{/if}
+
 	<div class="flex-1 overflow-y-auto">
 		{#each packages as pkg (pkg.name)}
 			<div class="group flex items-center px-3 py-1.5 gap-1 border-b border-border {pkg.status === 'error' ? 'bg-error/10' : ''}"
@@ -131,12 +148,17 @@
 				<span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{pkg.name}</span>
 				{#if pkg.status === "installing"}
 					<span class="size-3 border-2 border-border border-t-accent rounded-full animate-spin"></span>
+					<span class="sr-only">Installing</span>
+				{:else if pkg.status === "error"}
+					<span class="text-error text-[11px]">error</span>
 				{:else}
 					<span class="text-text-secondary text-[11px]">@{pkg.version}</span>
 				{/if}
 				<button
 					class="bg-transparent px-1.5 py-0.5 text-base leading-none opacity-0 group-hover:opacity-100 transition-opacity hover:bg-error"
 					onclick={() => onremove(pkg.name)}
+					disabled={pkg.status === "installing"}
+					aria-label={`Remove ${pkg.name}`}
 					title="Remove"
 				>×</button>
 			</div>
