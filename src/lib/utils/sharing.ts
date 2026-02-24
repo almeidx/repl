@@ -1,4 +1,5 @@
 import type { Package } from '$lib/stores/packages'
+import { replaceState } from '$app/navigation'
 
 interface ShareData {
   code: string
@@ -26,7 +27,7 @@ export function encodeShareUrl(code: string, packages: Package[]): string {
 
 export function updateUrlHash(code: string, packages: Package[]): void {
   const encoded = encodeShareData(code, packages)
-  history.replaceState(null, '', `#${encoded}`)
+  replaceState(`#${encoded}`, {})
 }
 
 export function decodeShareUrl(): ShareData | null {
