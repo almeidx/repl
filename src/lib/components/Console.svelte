@@ -9,6 +9,11 @@
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let fitAddon: any = null
 	let unsubscribeTheme: (() => void) | null = null
+	let resizeObserver: ResizeObserver | null = null
+	let initPromise: Promise<void> | null = null
+	let isMounted = false
+	let pendingWrites: string[] = []
+	let clearRequested = false
 
 	const DARK_THEME = {
 		background: '#1e1e1e',
@@ -24,54 +29,106 @@
 		selectionBackground: '#add6ff'
 	}
 
-	onMount(async () => {
-		const [{ Terminal }, { FitAddon }, { WebLinksAddon }] = await Promise.all([
-			import('@xterm/xterm'),
-			import('@xterm/addon-fit'),
-			import('@xterm/addon-web-links')
-		])
-		await import('@xterm/xterm/css/xterm.css')
+	onMount(() => {
+		isMounted = true
 
-		fitAddon = new FitAddon()
-
-		terminal = new Terminal({
-			theme: get(theme) === 'dark' ? DARK_THEME : LIGHT_THEME,
-			fontSize: 13,
-			fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-			cursorBlink: false,
-			cursorStyle: 'block',
-			scrollback: 10000,
-			convertEol: true
-		})
-
-		terminal.loadAddon(fitAddon)
-		terminal.loadAddon(new WebLinksAddon())
-		terminal.open(container)
-		fitAddon.fit()
-
-		const resizeObserver = new ResizeObserver(() => {
-			fitAddon?.fit()
-		})
-		resizeObserver.observe(container)
-
-		unsubscribeTheme = theme.subscribe(t => {
-			if (terminal) {
-				terminal.options.theme = t === 'dark' ? DARK_THEME : LIGHT_THEME
-			}
-		})
+		return () => {
+			isMounted = false
+		}
 	})
 
 	onDestroy(() => {
+		resizeObserver?.disconnect()
+		resizeObserver = null
 		terminal?.dispose()
+		terminal = null
 		unsubscribeTheme?.()
+		unsubscribeTheme = null
+		pendingWrites = []
 	})
 
 	export function write(data: string) {
-		terminal?.write(data)
+		if (terminal) {
+			terminal.write(data)
+			return
+		}
+
+		pendingWrites.push(data)
+		void ensureTerminal()
 	}
 
 	export function clear() {
-		terminal?.clear()
+		if (terminal) {
+			terminal.clear()
+			return
+		}
+
+		clearRequested = true
+		pendingWrites = []
+		void ensureTerminal()
+	}
+
+	async function ensureTerminal(): Promise<void> {
+		if (terminal || !isMounted) return
+		if (initPromise) {
+			await initPromise
+			return
+		}
+
+		initPromise = (async () => {
+			const [{ Terminal }, { FitAddon }, { WebLinksAddon }] = await Promise.all([
+				import('@xterm/xterm'),
+				import('@xterm/addon-fit'),
+				import('@xterm/addon-web-links')
+			])
+			await import('@xterm/xterm/css/xterm.css')
+
+			if (!isMounted) return
+
+			fitAddon = new FitAddon()
+
+			terminal = new Terminal({
+				theme: get(theme) === 'dark' ? DARK_THEME : LIGHT_THEME,
+				fontSize: 13,
+				fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+				cursorBlink: false,
+				cursorStyle: 'block',
+				scrollback: 10000,
+				convertEol: true
+			})
+
+			terminal.loadAddon(fitAddon)
+			terminal.loadAddon(new WebLinksAddon())
+			terminal.open(container)
+			fitAddon.fit()
+
+			resizeObserver = new ResizeObserver(() => {
+				fitAddon?.fit()
+			})
+			resizeObserver.observe(container)
+
+			unsubscribeTheme = theme.subscribe(t => {
+				if (terminal) {
+					terminal.options.theme = t === 'dark' ? DARK_THEME : LIGHT_THEME
+				}
+			})
+
+			if (clearRequested) {
+				terminal.clear()
+				clearRequested = false
+			}
+
+			if (pendingWrites.length > 0) {
+				for (const chunk of pendingWrites) {
+					terminal.write(chunk)
+				}
+				pendingWrites = []
+			}
+		})().finally(() => {
+			initPromise = null
+		})
+
+		await initPromise
 	}
 </script>
 

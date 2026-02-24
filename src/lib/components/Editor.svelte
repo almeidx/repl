@@ -9,9 +9,21 @@
     value: string
   }
 
+  type MonacoWindow = Window & {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    require?: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    __monacoLoaderPromise?: Promise<any>
+  }
+
+  const MONACO_BASE_URL = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min'
+  const MONACO_LOADER_URL = `${MONACO_BASE_URL}/vs/loader.js`
+  const MONACO_LOAD_TIMEOUT_MS = 15000
+
   let { value = $bindable() }: Props = $props()
 
-  let container: HTMLDivElement
+  let container = $state<HTMLDivElement | null>(null)
+  let loadError = $state<string | null>(null)
   // Monaco loaded dynamically from CDN - types not available at compile time
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let editor: any = null
@@ -23,7 +35,12 @@
   const typeDisposables = new Map<string, any>()
 
   onMount(async () => {
-    monaco = await loadMonaco()
+    try {
+      monaco = await loadMonaco()
+    } catch (e) {
+      loadError = e instanceof Error ? e.message : 'Failed to load Monaco editor'
+      return
+    }
 
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2022,
@@ -42,6 +59,11 @@
     })
 
     monaco.languages.typescript.typescriptDefaults.setEagerModelSync(false)
+
+    if (!container) {
+      loadError = 'Editor container failed to initialize'
+      return
+    }
 
     editor = monaco.editor.create(container, {
       value,
@@ -111,21 +133,88 @@
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function loadMonaco(): Promise<any> {
-    return new Promise((resolve) => {
-      const script = document.createElement('script')
-      script.src = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js'
-      script.crossOrigin = 'anonymous'
-      script.onload = () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const req = (window as any).require
+    const monacoWindow = window as MonacoWindow
+
+    if (monacoWindow.__monacoLoaderPromise) {
+      return monacoWindow.__monacoLoaderPromise
+    }
+
+    monacoWindow.__monacoLoaderPromise = new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => {
+        reject(new Error('Timed out loading Monaco editor'))
+      }, MONACO_LOAD_TIMEOUT_MS)
+
+      const clearLoadTimeout = () => {
+        clearTimeout(timeout)
+      }
+
+      const initializeMonaco = () => {
+        const req = monacoWindow.require
+        if (!req) {
+          clearLoadTimeout()
+          reject(new Error('Monaco loader unavailable'))
+          return
+        }
+
         req.config({
-          paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' }
+          paths: { vs: `${MONACO_BASE_URL}/vs` }
         })
-        req(['vs/editor/editor.main'], resolve)
+        req(
+          ['vs/editor/editor.main'],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (loadedMonaco: any) => {
+            clearLoadTimeout()
+            resolve(loadedMonaco)
+          },
+          () => {
+            clearLoadTimeout()
+            reject(new Error('Failed to load Monaco editor'))
+          }
+        )
+      }
+
+      const existingLoader = document.querySelector<HTMLScriptElement>('script[data-monaco-loader="true"]')
+      if (existingLoader) {
+        if (monacoWindow.require) {
+          initializeMonaco()
+          return
+        }
+
+        existingLoader.addEventListener('load', initializeMonaco, { once: true })
+        existingLoader.addEventListener(
+          'error',
+          () => {
+            clearLoadTimeout()
+            reject(new Error('Failed to load Monaco editor script'))
+          },
+          { once: true }
+        )
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = MONACO_LOADER_URL
+      script.crossOrigin = 'anonymous'
+      script.dataset.monacoLoader = 'true'
+      script.onload = initializeMonaco
+      script.onerror = () => {
+        clearLoadTimeout()
+        reject(new Error('Failed to load Monaco editor script'))
       }
       document.head.appendChild(script)
+    }).catch((error) => {
+      monacoWindow.__monacoLoaderPromise = undefined
+      throw error
     })
+
+    return monacoWindow.__monacoLoaderPromise
   }
 </script>
 
-<div class="flex-1 min-w-0 h-full" bind:this={container}></div>
+{#if loadError}
+  <div class="flex-1 min-w-0 h-full p-4 bg-bg-primary text-error">
+    {loadError}. Check your network connection and refresh.
+  </div>
+{:else}
+  <div class="flex-1 min-w-0 h-full" bind:this={container}></div>
+{/if}
