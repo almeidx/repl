@@ -40,6 +40,21 @@ Open http://localhost:5173
 | `pnpm preview` | Preview with Wrangler locally |
 | `pnpm run deploy` | Build and deploy to Cloudflare |
 | `pnpm check` | Run type checking |
+| `pnpm test:smoke` | Run Playwright smoke test |
+
+## Testing
+
+Install Playwright Chromium once:
+
+```bash
+pnpm exec playwright install chromium
+```
+
+Run smoke tests:
+
+```bash
+pnpm test:smoke
+```
 
 ## Keyboard Shortcuts
 
