@@ -8,6 +8,8 @@
 	import { packages, installPackage, removePackage } from "$lib/stores/packages";
 	import { theme, initTheme, toggleTheme } from "$lib/stores/theme";
 	import { encodeShareUrl, decodeShareUrl, updateUrlHash, parsePackagesFromUrl } from "$lib/utils/sharing";
+	import { getShortcutAction } from "$lib/utils/shortcuts";
+	import { getResizedConsoleHeight, getResizedSidebarWidth } from "$lib/utils/layout";
 
 	let code = $state(`console.log('Hello, world!')`);
 	let hashUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -83,23 +85,33 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		const isMeta = e.metaKey || e.ctrlKey;
+		const action = getShortcutAction(e, showMobilePackages);
+		if (!action) return;
 
-		if (e.key === "Escape" && showMobilePackages) {
-			e.preventDefault();
+		e.preventDefault();
+
+		if (action === "closeMobilePackages") {
 			showMobilePackages = false;
-		} else if (isMeta && e.key === "Enter") {
-			e.preventDefault();
+			return;
+		}
+
+		if (action === "run") {
 			const status = $containerState.status;
 			if (status === "ready" || status === "idle") handleRun();
-		} else if (isMeta && e.key === ".") {
-			e.preventDefault();
+			return;
+		}
+
+		if (action === "stop") {
 			handleStop();
-		} else if (isMeta && e.key === "k") {
-			e.preventDefault();
+			return;
+		}
+
+		if (action === "clearConsole") {
 			handleClearConsole();
-		} else if (isMeta && e.shiftKey && e.key === "C") {
-			e.preventDefault();
+			return;
+		}
+
+		if (action === "share") {
 			handleShare();
 		}
 	}
@@ -118,12 +130,10 @@
 
 	function handleMouseMove(e: MouseEvent) {
 		if (isResizingConsole || isResizingBoth) {
-			const newHeight = window.innerHeight - e.clientY;
-			consoleHeight = Math.max(50, Math.min(newHeight, window.innerHeight - 150));
+			consoleHeight = getResizedConsoleHeight(window.innerHeight, e.clientY);
 		}
 		if (isResizingSidebar || isResizingBoth) {
-			const newWidth = window.innerWidth - e.clientX;
-			sidebarWidth = Math.max(200, Math.min(newWidth, 400));
+			sidebarWidth = getResizedSidebarWidth(window.innerWidth, e.clientX);
 		}
 	}
 
