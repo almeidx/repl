@@ -53,7 +53,9 @@
 
 	function handleRun() {
 		consoleRef?.clear();
-		runCode(code, (data) => consoleRef?.write(data));
+		void runCode(code, (data) => consoleRef?.write(data)).catch((e) => {
+			consoleRef?.write(`\n\x1b[31mError: ${e instanceof Error ? e.message : "Unknown error"}\x1b[0m\n`);
+		});
 	}
 
 	function handleStop() {

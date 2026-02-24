@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store'
 import { WebContainer } from '@webcontainer/api'
 
 export interface ContainerState {
-  status: 'idle' | 'booting' | 'ready' | 'running' | 'error'
+  status: 'idle' | 'booting' | 'ready' | 'running' | 'installing' | 'error'
   error?: string
 }
 
@@ -12,6 +12,7 @@ let webcontainer: WebContainer | null = null
 let currentProcess: Awaited<ReturnType<WebContainer['spawn']>> | null = null
 let executionTimeout: ReturnType<typeof setTimeout> | null = null
 let bootPromise: Promise<void> | null = null
+let activeTask: 'running' | 'packages' | null = null
 
 const EXECUTION_TIMEOUT_MS = 30000
 
@@ -51,7 +52,10 @@ async function bootContainer(): Promise<void> {
     await webcontainer.mount(FILES)
 
     const installProcess = await webcontainer.spawn('npm', ['install'])
-    await installProcess.exit
+    const exitCode = await installProcess.exit
+    if (exitCode !== 0) {
+      throw new Error('Failed to install runtime dependencies')
+    }
 
     containerState.set({ status: 'ready' })
   } catch (e) {
@@ -74,10 +78,48 @@ export async function ensureBooted(): Promise<void> {
   await bootPromise
 }
 
-export async function runCode(code: string, onOutput: (data: string) => void): Promise<void> {
-  await ensureBooted()
+function clearExecutionTimeout(): void {
+  if (executionTimeout) {
+    clearTimeout(executionTimeout)
+    executionTimeout = null
+  }
+}
 
-  if (get(containerState).status !== 'ready') return
+function setReadyState(): void {
+  if (get(containerState).status !== 'error') {
+    containerState.set({ status: 'ready' })
+  }
+}
+
+function tryAcquireTask(task: 'running' | 'packages'): boolean {
+  if (activeTask) return false
+  activeTask = task
+  return true
+}
+
+function releaseTask(task: 'running' | 'packages'): void {
+  if (activeTask === task) {
+    activeTask = null
+  }
+}
+
+export async function runCode(code: string, onOutput: (data: string) => void): Promise<void> {
+  try {
+    await ensureBooted()
+  } catch (e) {
+    onOutput(`\n\x1b[31mError: ${e instanceof Error ? e.message : 'Failed to start runtime'}\x1b[0m\n`)
+    return
+  }
+
+  if (!tryAcquireTask('running')) {
+    onOutput('\n\x1b[33mContainer is busy. Please wait for the current task to finish.\x1b[0m\n')
+    return
+  }
+
+  if (get(containerState).status !== 'ready') {
+    releaseTask('running')
+    return
+  }
 
   containerState.set({ status: 'running' })
 
@@ -86,11 +128,13 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
 
     currentProcess = await webcontainer!.spawn('./node_modules/.bin/tsx', ['index.ts'])
 
-    currentProcess.output.pipeTo(new WritableStream({
+    const outputPipe = currentProcess.output.pipeTo(new WritableStream({
       write(data) {
         onOutput(data)
       }
-    }))
+    })).catch(() => {
+      // Stream may close abruptly when process is terminated; safe to ignore.
+    })
 
     executionTimeout = setTimeout(() => {
       onOutput('\n\x1b[33mExecution timed out after 30 seconds\x1b[0m\n')
@@ -98,11 +142,7 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
     }, EXECUTION_TIMEOUT_MS)
 
     const exitCode = await currentProcess.exit
-
-    if (executionTimeout) {
-      clearTimeout(executionTimeout)
-      executionTimeout = null
-    }
+    await outputPipe
 
     if (exitCode !== 0) {
       onOutput(`\n\x1b[31mProcess exited with code ${exitCode}\x1b[0m\n`)
@@ -110,16 +150,15 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
   } catch (e) {
     onOutput(`\n\x1b[31mError: ${e instanceof Error ? e.message : 'Unknown error'}\x1b[0m\n`)
   } finally {
+    clearExecutionTimeout()
     currentProcess = null
-    containerState.set({ status: 'ready' })
+    releaseTask('running')
+    setReadyState()
   }
 }
 
 export function stopExecution(): void {
-  if (executionTimeout) {
-    clearTimeout(executionTimeout)
-    executionTimeout = null
-  }
+  clearExecutionTimeout()
   if (currentProcess) {
     currentProcess.kill()
     currentProcess = null
@@ -132,22 +171,58 @@ export function stopExecution(): void {
 export async function installPackageInContainer(name: string, version: string): Promise<string> {
   await ensureBooted()
 
-  if (get(containerState).status !== 'ready') throw new Error('Container busy')
+  if (!tryAcquireTask('packages')) throw new Error('Container busy')
 
-  const pkgSpec = version === 'latest' ? name : `${name}@${version}`
-  const installProcess = await webcontainer!.spawn('npm', ['install', '--save', pkgSpec])
-
-  const exitCode = await installProcess.exit
-  if (exitCode !== 0) {
-    throw new Error(`Failed to install ${pkgSpec}`)
+  if (get(containerState).status !== 'ready') {
+    releaseTask('packages')
+    throw new Error('Container busy')
   }
 
-  const pkgJsonContent = await webcontainer!.fs.readFile('package.json', 'utf-8')
-  const pkgJson = JSON.parse(pkgJsonContent)
-  const installedVersion = pkgJson.dependencies?.[name]
+  containerState.set({ status: 'installing' })
 
-  if (installedVersion) {
-    return installedVersion.replace(/^[\^~]/, '')
+  try {
+    const pkgSpec = version === 'latest' ? name : `${name}@${version}`
+    const installProcess = await webcontainer!.spawn('npm', ['install', '--save', pkgSpec])
+
+    const exitCode = await installProcess.exit
+    if (exitCode !== 0) {
+      throw new Error(`Failed to install ${pkgSpec}`)
+    }
+
+    const pkgJsonContent = await webcontainer!.fs.readFile('package.json', 'utf-8')
+    const pkgJson = JSON.parse(pkgJsonContent)
+    const installedVersion = pkgJson.dependencies?.[name]
+
+    if (installedVersion) {
+      return installedVersion.replace(/^[\^~]/, '')
+    }
+    return version === 'latest' ? 'latest' : version
+  } finally {
+    releaseTask('packages')
+    setReadyState()
   }
-  return version === 'latest' ? 'latest' : version
+}
+
+export async function uninstallPackageInContainer(name: string): Promise<void> {
+  await ensureBooted()
+
+  if (!tryAcquireTask('packages')) throw new Error('Container busy')
+
+  if (get(containerState).status !== 'ready') {
+    releaseTask('packages')
+    throw new Error('Container busy')
+  }
+
+  containerState.set({ status: 'installing' })
+
+  try {
+    const uninstallProcess = await webcontainer!.spawn('npm', ['uninstall', name])
+    const exitCode = await uninstallProcess.exit
+    if (exitCode !== 0) {
+      throw new Error(`Failed to remove ${name}`)
+    }
+  } finally {
+    releaseTask('packages')
+    setReadyState()
+  }
 }
