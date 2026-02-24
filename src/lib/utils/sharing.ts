@@ -1,24 +1,6 @@
-import type { Package } from '$lib/stores/packages'
 import { replaceState } from '$app/navigation'
-
-interface ShareData {
-  code: string
-  packages?: { name: string; version: string }[]
-}
-
-export function encodeShareData(code: string, packages: Package[]): string {
-  const data: ShareData = { code }
-
-  const installedPackages = packages
-    .filter(p => p.status === 'installed')
-    .map(p => ({ name: p.name, version: p.version }))
-
-  if (installedPackages.length > 0) {
-    data.packages = installedPackages
-  }
-
-  return btoa(encodeURIComponent(JSON.stringify(data)))
-}
+import type { Package } from '$lib/stores/packages'
+import { decodeShareData, encodeShareData, parsePackagesFromSearch, type ShareData } from './share-data'
 
 export function encodeShareUrl(code: string, packages: Package[]): string {
   const encoded = encodeShareData(code, packages)
@@ -32,25 +14,9 @@ export function updateUrlHash(code: string, packages: Package[]): void {
 
 export function decodeShareUrl(): ShareData | null {
   const hash = window.location.hash.slice(1)
-  if (!hash) return null
-
-  try {
-    const decoded = JSON.parse(decodeURIComponent(atob(hash)))
-    return decoded
-  } catch {
-    return null
-  }
+  return decodeShareData(hash)
 }
 
 export function parsePackagesFromUrl(): { name: string; version: string }[] {
-  const params = new URLSearchParams(window.location.search)
-  const pkgParams = params.getAll('pkg')
-
-  return pkgParams.map(pkg => {
-    const atIndex = pkg.lastIndexOf('@')
-    if (atIndex > 0) {
-      return { name: pkg.slice(0, atIndex), version: pkg.slice(atIndex + 1) }
-    }
-    return { name: pkg, version: 'latest' }
-  })
+  return parsePackagesFromSearch(window.location.search)
 }

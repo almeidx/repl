@@ -40,6 +40,7 @@ Open http://localhost:5173
 | `pnpm preview` | Preview with Wrangler locally |
 | `pnpm run deploy` | Build and deploy to Cloudflare |
 | `pnpm check` | Run type checking |
+| `pnpm test:unit` | Run unit tests (Vitest) |
 | `pnpm test:smoke` | Run Playwright smoke test |
 
 ## Testing

@@ -11,7 +11,8 @@
     "deploy": "pnpm build && wrangler deploy",
     "dev": "vite dev",
     "preview": "wrangler dev",
-    "test:smoke": "playwright test --config=playwright.config.ts"
+    "test:smoke": "playwright test --config=playwright.config.ts",
+    "test:unit": "vitest run tests/unit"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
@@ -30,6 +31,7 @@
     "tailwindcss": "^4.2.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
+    "vitest": "^4.0.18",
     "wrangler": "^4.67.0"
   },
   "packageManager": "pnpm@10.30.1"
