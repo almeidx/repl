@@ -28,13 +28,24 @@
 		const decoded = decodeShareUrl();
 		if (decoded) {
 			code = decoded.code;
-			if (decoded.packages) {
-				decoded.packages.forEach((pkg) => installPackage(pkg.name, pkg.version));
-			}
 		}
 
-		const urlPackages = parsePackagesFromUrl();
-		urlPackages.forEach((pkg) => installPackage(pkg.name, pkg.version));
+		const initialPackages = new Map<string, string>();
+		decoded?.packages?.forEach((pkg) => {
+			initialPackages.set(pkg.name, pkg.version);
+		});
+
+		// Keep compatibility with legacy ?pkg= links while avoiding duplicate installs.
+		const legacyQueryPackages = parsePackagesFromUrl();
+		legacyQueryPackages.forEach((pkg) => {
+			if (!initialPackages.has(pkg.name)) {
+				initialPackages.set(pkg.name, pkg.version);
+			}
+		});
+
+		initialPackages.forEach((version, name) => {
+			void installPackage(name, version);
+		});
 
 		return () => {
 			if (hashUpdateTimeout) clearTimeout(hashUpdateTimeout);

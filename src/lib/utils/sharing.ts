@@ -19,29 +19,14 @@ export function encodeShareData(code: string, packages: Package[]): string {
   return btoa(encodeURIComponent(JSON.stringify(data)))
 }
 
-function buildPackageParams(packages: Package[]): string {
-  const installed = packages.filter(p => p.status === 'installed')
-  if (installed.length === 0) return ''
-
-  const params = new URLSearchParams()
-  for (const pkg of installed) {
-    params.append('pkg', `${pkg.name}@${pkg.version}`)
-  }
-  return params.toString()
-}
-
 export function encodeShareUrl(code: string, packages: Package[]): string {
   const encoded = encodeShareData(code, packages)
-  const pkgParams = buildPackageParams(packages)
-  const query = pkgParams ? `?${pkgParams}` : ''
-  return `${window.location.origin}${window.location.pathname}${query}#${encoded}`
+  return `${window.location.origin}${window.location.pathname}#${encoded}`
 }
 
 export function updateUrlHash(code: string, packages: Package[]): void {
   const encoded = encodeShareData(code, packages)
-  const pkgParams = buildPackageParams(packages)
-  const query = pkgParams ? `?${pkgParams}` : ''
-  history.replaceState(null, '', `${query}#${encoded}`)
+  history.replaceState(null, '', `#${encoded}`)
 }
 
 export function decodeShareUrl(): ShareData | null {
