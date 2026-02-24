@@ -1,23 +1,31 @@
-import { writable } from 'svelte/store'
+import { writable, get } from 'svelte/store'
 
 export type Theme = 'dark' | 'light'
 
 export const theme = writable<Theme>('dark')
+let systemThemeQuery: MediaQueryList | null = null
+let systemThemeListener: ((e: MediaQueryListEvent) => void) | null = null
 
 export function initTheme() {
-  const stored = localStorage.getItem('theme') as Theme | null
-  if (stored) {
+  const stored = localStorage.getItem('theme')
+  if (stored === 'dark' || stored === 'light') {
     setTheme(stored)
   } else {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     setTheme(prefersDark ? 'dark' : 'light')
   }
 
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  if (systemThemeQuery && systemThemeListener) {
+    systemThemeQuery.removeEventListener('change', systemThemeListener)
+  }
+
+  systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  systemThemeListener = (e) => {
     if (!localStorage.getItem('theme')) {
       setTheme(e.matches ? 'dark' : 'light')
     }
-  })
+  }
+  systemThemeQuery.addEventListener('change', systemThemeListener)
 }
 
 function setTheme(t: Theme) {
@@ -26,10 +34,8 @@ function setTheme(t: Theme) {
 }
 
 export function toggleTheme() {
-  theme.update(t => {
-    const newTheme = t === 'dark' ? 'light' : 'dark'
-    localStorage.setItem('theme', newTheme)
-    setTheme(newTheme)
-    return newTheme
-  })
+  const currentTheme = get(theme)
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  localStorage.setItem('theme', newTheme)
+  setTheme(newTheme)
 }
