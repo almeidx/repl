@@ -39,6 +39,9 @@ Open http://localhost:5173
 | `pnpm build` | Build for production |
 | `pnpm preview` | Preview with Wrangler locally |
 | `pnpm run deploy` | Build and deploy to Cloudflare |
+| `pnpm lint` | Run oxlint checks |
+| `pnpm format` | Format TS/JS files with oxfmt |
+| `pnpm format:check` | Verify TS/JS formatting with oxfmt |
 | `pnpm check` | Run type checking |
 | `pnpm test:unit` | Run unit tests (Vitest) |
 | `pnpm test:smoke` | Run Playwright smoke test |

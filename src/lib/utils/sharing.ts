@@ -1,22 +1,27 @@
-import { replaceState } from '$app/navigation'
-import type { Package } from '$lib/stores/packages'
-import { decodeShareData, encodeShareData, parsePackagesFromSearch, type ShareData } from './share-data'
+import { replaceState } from "$app/navigation";
+import type { Package } from "$lib/stores/packages";
+import {
+  decodeShareData,
+  encodeShareData,
+  parsePackagesFromSearch,
+  type ShareData,
+} from "./share-data";
 
 export function encodeShareUrl(code: string, packages: Package[]): string {
-  const encoded = encodeShareData(code, packages)
-  return `${window.location.origin}${window.location.pathname}#${encoded}`
+  const encoded = encodeShareData(code, packages);
+  return `${window.location.origin}${window.location.pathname}#${encoded}`;
 }
 
 export function updateUrlHash(code: string, packages: Package[]): void {
-  const encoded = encodeShareData(code, packages)
-  replaceState(`#${encoded}`, {})
+  const encoded = encodeShareData(code, packages);
+  replaceState(`#${encoded}`, {});
 }
 
 export function decodeShareUrl(): ShareData | null {
-  const hash = window.location.hash.slice(1)
-  return decodeShareData(hash)
+  const hash = window.location.hash.slice(1);
+  return decodeShareData(hash);
 }
 
 export function parsePackagesFromUrl(): { name: string; version: string }[] {
-  return parsePackagesFromSearch(window.location.search)
+  return parsePackagesFromSearch(window.location.search);
 }

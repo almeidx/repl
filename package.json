@@ -10,6 +10,9 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "deploy": "pnpm build && wrangler deploy",
     "dev": "vite dev",
+    "format": "oxfmt --write \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{js,ts}\"",
+    "format:check": "oxfmt --check \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{js,ts}\"",
+    "lint": "oxlint --deny-warnings --ignore-pattern '**/*.svelte' .",
     "preview": "wrangler dev",
     "test:smoke": "playwright test --config=playwright.config.ts",
     "test:unit": "vitest run tests/unit"
@@ -26,6 +29,8 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.2.0",
     "@webcontainer/api": "^1.6.1",
+    "oxfmt": "^0.35.0",
+    "oxlint": "^1.50.0",
     "svelte": "^5.53.2",
     "svelte-check": "^4.4.3",
     "tailwindcss": "^4.2.0",
