@@ -1,5 +1,13 @@
 export type ShortcutAction = "closeMobilePackages" | "run" | "stop" | "clearConsole" | "share" | null;
 
+export function shouldIgnoreGlobalShortcuts(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) return false;
+	if (target.isContentEditable) return true;
+
+	const tagName = target.tagName.toLowerCase();
+	return tagName === "input" || tagName === "textarea" || tagName === "select";
+}
+
 export function getShortcutAction(event: KeyboardEvent, isMobilePackagesOpen: boolean): ShortcutAction {
 	if (event.key === "Escape" && isMobilePackagesOpen) {
 		return "closeMobilePackages";

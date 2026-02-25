@@ -1,220 +1,190 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
-  import { theme } from '$lib/stores/theme'
-  import { packages, type Package } from '$lib/stores/packages'
-  import { fetchPackageTypes } from '$lib/utils/types'
-  import { get } from 'svelte/store'
+	import { onDestroy, onMount } from "svelte";
+	import { get } from "svelte/store";
+	import { theme } from "$lib/stores/theme";
+	import { packages, type Package } from "$lib/stores/packages";
+	import { fetchPackageTypes } from "$lib/utils/types";
+	import { loadMonaco } from "$lib/utils/monaco";
 
-  interface Props {
-    value: string
-  }
+	interface Props {
+		value: string;
+	}
 
-  type MonacoWindow = Window & {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    require?: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    __monacoLoaderPromise?: Promise<any>
-  }
+	type MonacoModule = Awaited<ReturnType<typeof loadMonaco>>;
+	type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
+	type MonacoDisposable = import("monaco-editor").IDisposable;
+	type MonacoTsLanguage = {
+		typescriptDefaults: any;
+		ScriptTarget: any;
+		ModuleResolutionKind: any;
+		ModuleKind: any;
+	};
 
-  const MONACO_BASE_URL = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min'
-  const MONACO_LOADER_URL = `${MONACO_BASE_URL}/vs/loader.js`
-  const MONACO_LOAD_TIMEOUT_MS = 15000
+	let { value = $bindable() }: Props = $props();
 
-  let { value = $bindable() }: Props = $props()
+	let container = $state<HTMLDivElement | null>(null);
+	let loadError = $state<string | null>(null);
+	let editor: MonacoEditor | null = null;
+	let monaco: MonacoModule | null = null;
+	let unsubscribeTheme: (() => void) | null = null;
+	let unsubscribePackages: (() => void) | null = null;
+	const typeDisposables = new Map<string, MonacoDisposable>();
+	const resolvedTypeVersions = new Map<string, string>();
+	let typeSyncRunId = 0;
 
-  let container = $state<HTMLDivElement | null>(null)
-  let loadError = $state<string | null>(null)
-  // Monaco loaded dynamically from CDN - types not available at compile time
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let editor: any = null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let monaco: any = null
-  let unsubscribeTheme: (() => void) | null = null
-  let unsubscribePackages: (() => void) | null = null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const typeDisposables = new Map<string, any>()
+	onMount(async () => {
+		try {
+			monaco = await loadMonaco();
+		} catch (error) {
+			loadError = error instanceof Error ? error.message : "Failed to load Monaco editor";
+			return;
+		}
 
-  onMount(async () => {
-    try {
-      monaco = await loadMonaco()
-    } catch (e) {
-      loadError = e instanceof Error ? e.message : 'Failed to load Monaco editor'
-      return
-    }
+		if (!monaco) {
+			loadError = "Monaco failed to initialize";
+			return;
+		}
 
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      target: monaco.languages.typescript.ScriptTarget.ES2022,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-      module: monaco.languages.typescript.ModuleKind.ESNext,
-      strict: true,
-      esModuleInterop: true,
-      skipLibCheck: true,
-      allowSyntheticDefaultImports: true,
-      noEmit: true
-    })
+		const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage;
 
-    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-      noSemanticValidation: false,
-      noSyntaxValidation: false
-    })
+		typescript.typescriptDefaults.setCompilerOptions({
+			target: typescript.ScriptTarget.ES2022,
+			moduleResolution: typescript.ModuleResolutionKind.NodeJs,
+			module: typescript.ModuleKind.ESNext,
+			strict: true,
+			esModuleInterop: true,
+			skipLibCheck: true,
+			allowSyntheticDefaultImports: true,
+			noEmit: true,
+		});
 
-    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(false)
+		typescript.typescriptDefaults.setDiagnosticsOptions({
+			noSemanticValidation: false,
+			noSyntaxValidation: false,
+		});
 
-    if (!container) {
-      loadError = 'Editor container failed to initialize'
-      return
-    }
+		typescript.typescriptDefaults.setEagerModelSync(false);
 
-    editor = monaco.editor.create(container, {
-      value,
-      language: 'typescript',
-      theme: get(theme) === 'dark' ? 'vs-dark' : 'vs',
-      minimap: { enabled: false },
-      fontSize: 14,
-      lineNumbers: 'on',
-      scrollBeyondLastLine: false,
-      automaticLayout: true,
-      tabSize: 2,
-      wordWrap: 'on',
-      padding: { top: 12 }
-    })
+		if (!container) {
+			loadError = "Editor container failed to initialize";
+			return;
+		}
 
-    editor.onDidChangeModelContent(() => {
-      value = editor.getValue()
-    })
+		editor = monaco.editor.create(container, {
+			value,
+			language: "typescript",
+			theme: get(theme) === "dark" ? "vs-dark" : "vs",
+			minimap: { enabled: false },
+			fontSize: 14,
+			lineNumbers: "on",
+			scrollBeyondLastLine: false,
+			automaticLayout: true,
+			tabSize: 2,
+			wordWrap: "on",
+			padding: { top: 12 },
+		});
 
-    unsubscribeTheme = theme.subscribe(t => {
-      if (monaco && editor) {
-        monaco.editor.setTheme(t === 'dark' ? 'vs-dark' : 'vs')
-      }
-    })
+		editor.onDidChangeModelContent(() => {
+			value = editor?.getValue() ?? value;
+		});
 
-    unsubscribePackages = packages.subscribe(pkgs => {
-      if (monaco) syncPackageTypes(pkgs)
-    })
-  })
+		unsubscribeTheme = theme.subscribe((currentTheme) => {
+			if (monaco && editor) {
+				monaco.editor.setTheme(currentTheme === "dark" ? "vs-dark" : "vs");
+			}
+		});
 
-  async function syncPackageTypes(pkgs: Package[]) {
-    const installedNames = new Set(pkgs.filter(p => p.status === 'installed').map(p => p.name))
+		unsubscribePackages = packages.subscribe((pkgs) => {
+			void syncPackageTypes(pkgs);
+		});
 
-    for (const name of typeDisposables.keys()) {
-      if (!installedNames.has(name)) {
-        typeDisposables.get(name)?.dispose()
-        typeDisposables.delete(name)
-      }
-    }
+		void syncPackageTypes(get(packages));
+	});
 
-    for (const pkg of pkgs) {
-      if (pkg.status === 'installed' && !typeDisposables.has(pkg.name)) {
-        const types = await fetchPackageTypes(pkg.name, pkg.version)
-        if (types && monaco) {
-          const disposable = monaco.languages.typescript.typescriptDefaults.addExtraLib(
-            types,
-            `file:///node_modules/${pkg.name}/index.d.ts`
-          )
-          typeDisposables.set(pkg.name, disposable)
-        }
-      }
-    }
-  }
+	onDestroy(() => {
+		typeSyncRunId++;
+		editor?.dispose();
+		editor = null;
+		unsubscribeTheme?.();
+		unsubscribePackages?.();
+		for (const disposable of typeDisposables.values()) {
+			disposable.dispose();
+		}
+		typeDisposables.clear();
+		resolvedTypeVersions.clear();
+	});
 
-  onDestroy(() => {
-    editor?.dispose()
-    unsubscribeTheme?.()
-    unsubscribePackages?.()
-    typeDisposables.forEach(d => d.dispose())
-  })
+	$effect(() => {
+		if (!editor) return;
+		if (editor.getValue() === value) return;
+		editor.setValue(value);
+	});
 
-  $effect(() => {
-    if (editor && editor.getValue() !== value) {
-      editor.setValue(value)
-    }
-  })
+	async function syncPackageTypes(pkgs: Package[]): Promise<void> {
+		if (!monaco) return;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function loadMonaco(): Promise<any> {
-    const monacoWindow = window as MonacoWindow
+		const runId = ++typeSyncRunId;
+		const installedVersions = new Map<string, string>();
+		for (const pkg of pkgs) {
+			if (pkg.status === "installed") {
+				installedVersions.set(pkg.name, pkg.version);
+			}
+		}
 
-    if (monacoWindow.__monacoLoaderPromise) {
-      return monacoWindow.__monacoLoaderPromise
-    }
+		for (const [name, disposable] of typeDisposables.entries()) {
+			const nextVersion = installedVersions.get(name);
+			if (!nextVersion || resolvedTypeVersions.get(name) !== nextVersion) {
+				disposable.dispose();
+				typeDisposables.delete(name);
+			}
+		}
 
-    monacoWindow.__monacoLoaderPromise = new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
-        reject(new Error('Timed out loading Monaco editor'))
-      }, MONACO_LOAD_TIMEOUT_MS)
+		for (const [name, version] of resolvedTypeVersions.entries()) {
+			if (!installedVersions.has(name) || installedVersions.get(name) !== version) {
+				resolvedTypeVersions.delete(name);
+			}
+		}
 
-      const clearLoadTimeout = () => {
-        clearTimeout(timeout)
-      }
+		const needsFetch = [...installedVersions.entries()].filter(
+			([name, version]) => resolvedTypeVersions.get(name) !== version,
+		);
 
-      const initializeMonaco = () => {
-        const req = monacoWindow.require
-        if (!req) {
-          clearLoadTimeout()
-          reject(new Error('Monaco loader unavailable'))
-          return
-        }
+		if (needsFetch.length === 0) return;
 
-        req.config({
-          paths: { vs: `${MONACO_BASE_URL}/vs` }
-        })
-        req(
-          ['vs/editor/editor.main'],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (loadedMonaco: any) => {
-            clearLoadTimeout()
-            resolve(loadedMonaco)
-          },
-          () => {
-            clearLoadTimeout()
-            reject(new Error('Failed to load Monaco editor'))
-          }
-        )
-      }
+		const fetchedTypes = await Promise.all(
+			needsFetch.map(async ([name, version]) => {
+				const types = await fetchPackageTypes(name, version);
+				return { name, version, types };
+			}),
+		);
 
-      const existingLoader = document.querySelector<HTMLScriptElement>('script[data-monaco-loader="true"]')
-      if (existingLoader) {
-        if (monacoWindow.require) {
-          initializeMonaco()
-          return
-        }
+		if (runId !== typeSyncRunId || !monaco) return;
 
-        existingLoader.addEventListener('load', initializeMonaco, { once: true })
-        existingLoader.addEventListener(
-          'error',
-          () => {
-            clearLoadTimeout()
-            reject(new Error('Failed to load Monaco editor script'))
-          },
-          { once: true }
-        )
-        return
-      }
+		for (const { name, version, types } of fetchedTypes) {
+			if (installedVersions.get(name) !== version) continue;
 
-      const script = document.createElement('script')
-      script.src = MONACO_LOADER_URL
-      script.crossOrigin = 'anonymous'
-      script.dataset.monacoLoader = 'true'
-      script.onload = initializeMonaco
-      script.onerror = () => {
-        clearLoadTimeout()
-        reject(new Error('Failed to load Monaco editor script'))
-      }
-      document.head.appendChild(script)
-    }).catch((error) => {
-      monacoWindow.__monacoLoaderPromise = undefined
-      throw error
-    })
+			const previous = typeDisposables.get(name);
+			previous?.dispose();
+			typeDisposables.delete(name);
 
-    return monacoWindow.__monacoLoaderPromise
-  }
+			if (types) {
+				const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage;
+				const disposable = typescript.typescriptDefaults.addExtraLib(
+					types,
+					`file:///node_modules/${name}/${version}/index.d.ts`,
+				);
+				typeDisposables.set(name, disposable);
+			}
+
+			resolvedTypeVersions.set(name, version);
+		}
+	}
 </script>
 
 {#if loadError}
-  <div class="flex-1 min-w-0 h-full p-4 bg-bg-primary text-error">
-    {loadError}. Check your network connection and refresh.
-  </div>
+	<div class="flex-1 min-w-0 h-full p-4 bg-bg-primary text-error">
+		{loadError}. Check your network connection and refresh.
+	</div>
 {:else}
-  <div class="flex-1 min-w-0 h-full" bind:this={container}></div>
+	<div class="flex-1 min-w-0 h-full" bind:this={container}></div>
 {/if}

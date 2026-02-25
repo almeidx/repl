@@ -58,6 +58,13 @@
 		@apply bg-accent-hover;
 	}
 
+	button:focus-visible,
+	input:focus-visible,
+	a:focus-visible,
+	[role="button"]:focus-visible {
+		@apply outline-2 outline-offset-2 outline-accent;
+	}
+
 	input {
 		@apply px-2 py-1.5 border border-border rounded bg-bg-tertiary text-text-primary outline-none;
 	}
@@ -91,4 +98,15 @@
 
 @utility animate-spin {
 	animation: spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
 }

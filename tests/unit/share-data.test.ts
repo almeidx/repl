@@ -19,6 +19,11 @@ describe("share-data utils", () => {
 		expect(decodeShareData("not-base64-data")).toBeNull();
 	});
 
+	it("returns null for payloads with invalid shape", () => {
+		const invalidShape = btoa(JSON.stringify({ code: { invalid: true } }));
+		expect(decodeShareData(invalidShape)).toBeNull();
+	});
+
 	it("parses packages from legacy search params including scoped packages", () => {
 		expect(parsePackagesFromSearch("?pkg=lodash@4.17.21&pkg=@types/node@24.9.1&pkg=left-pad")).toEqual([
 			{ name: "lodash", version: "4.17.21" },

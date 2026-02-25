@@ -1,5 +1,5 @@
 import { writable, get } from "svelte/store";
-import { WebContainer } from "@webcontainer/api";
+import type { WebContainer } from "@webcontainer/api";
 
 export interface ContainerState {
 	status: "idle" | "booting" | "ready" | "running" | "installing" | "error";
@@ -56,10 +56,13 @@ async function bootContainer(): Promise<void> {
 	containerState.set({ status: "booting" });
 
 	try {
+		const webcontainerApi = await import("@webcontainer/api");
+		const WebContainer = webcontainerApi.WebContainer;
+
 		webcontainer = await WebContainer.boot();
 		await webcontainer.mount(FILES);
 
-		const installProcess = await webcontainer.spawn("npm", ["install"]);
+		const installProcess = await webcontainer.spawn("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"]);
 		const exitCode = await installProcess.exit;
 		if (exitCode !== 0) {
 			throw new Error("Failed to install runtime dependencies");
@@ -81,7 +84,10 @@ export async function ensureBooted(): Promise<void> {
 	if (state.status === "error") throw new Error(state.error);
 
 	if (!bootPromise) {
-		bootPromise = bootContainer();
+		bootPromise = bootContainer().catch((error) => {
+			bootPromise = null;
+			throw error;
+		});
 	}
 	await bootPromise;
 }
@@ -180,7 +186,15 @@ export function stopExecution(): void {
 	}
 }
 
-export async function installPackageInContainer(name: string, version: string): Promise<string> {
+export interface InstallInContainerOptions {
+	allowScripts: boolean;
+}
+
+export async function installPackageInContainer(
+	name: string,
+	version: string,
+	options: InstallInContainerOptions,
+): Promise<string> {
 	await ensureBooted();
 
 	if (!tryAcquireTask("packages")) throw new Error("Container busy");
@@ -194,7 +208,13 @@ export async function installPackageInContainer(name: string, version: string): 
 
 	try {
 		const pkgSpec = version === "latest" ? name : `${name}@${version}`;
-		const installProcess = await webcontainer!.spawn("npm", ["install", "--save", pkgSpec]);
+		const installArgs = ["install", "--save-exact", "--no-audit", "--no-fund"];
+		if (!options.allowScripts) {
+			installArgs.push("--ignore-scripts");
+		}
+		installArgs.push(pkgSpec);
+
+		const installProcess = await webcontainer!.spawn("npm", installArgs);
 
 		const exitCode = await installProcess.exit;
 		if (exitCode !== 0) {
@@ -228,7 +248,13 @@ export async function uninstallPackageInContainer(name: string): Promise<void> {
 	containerState.set({ status: "installing" });
 
 	try {
-		const uninstallProcess = await webcontainer!.spawn("npm", ["uninstall", name]);
+		const uninstallProcess = await webcontainer!.spawn("npm", [
+			"uninstall",
+			"--ignore-scripts",
+			"--no-audit",
+			"--no-fund",
+			name,
+		]);
 		const exitCode = await uninstallProcess.exit;
 		if (exitCode !== 0) {
 			throw new Error(`Failed to remove ${name}`);

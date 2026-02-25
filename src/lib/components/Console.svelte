@@ -14,6 +14,9 @@
 	let isMounted = false
 	let pendingWrites: string[] = []
 	let clearRequested = false
+	let outputText = $state("")
+
+	const MAX_OUTPUT_CHARS = 40_000
 
 	const DARK_THEME = {
 		background: '#1e1e1e',
@@ -48,6 +51,8 @@
 	})
 
 	export function write(data: string) {
+		appendOutput(data)
+
 		if (terminal) {
 			terminal.write(data)
 			return
@@ -58,6 +63,8 @@
 	}
 
 	export function clear() {
+		outputText = ""
+
 		if (terminal) {
 			terminal.clear()
 			return
@@ -130,6 +137,12 @@
 
 		await initPromise
 	}
+
+	function appendOutput(chunk: string) {
+		const plainText = chunk.replace(/\x1b\[[0-9;]*m/g, "")
+		outputText = `${outputText}${plainText}`.slice(-MAX_OUTPUT_CHARS)
+	}
 </script>
 
 <div class="h-full p-2 bg-bg-primary [&_.xterm]:h-full" bind:this={container}></div>
+<pre class="sr-only" aria-live="polite" data-testid="console-output">{outputText}</pre>

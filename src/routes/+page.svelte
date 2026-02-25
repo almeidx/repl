@@ -4,12 +4,23 @@
 	import Editor from "$lib/components/Editor.svelte";
 	import Console from "$lib/components/Console.svelte";
 	import PackageSidebar from "$lib/components/PackageSidebar.svelte";
+	import ConfirmInstallDialog from "$lib/components/ui/ConfirmInstallDialog.svelte";
 	import { containerState, runCode, stopExecution } from "$lib/utils/webcontainer";
 	import { packages, installPackage, removePackage } from "$lib/stores/packages";
 	import { theme, initTheme, toggleTheme } from "$lib/stores/theme";
 	import { encodeShareUrl, decodeShareUrl, updateUrlHash, parsePackagesFromUrl } from "$lib/utils/sharing";
-	import { getShortcutAction } from "$lib/utils/shortcuts";
-	import { clampConsoleHeight, clampSidebarWidth, getResizedConsoleHeight, getResizedSidebarWidth } from "$lib/utils/layout";
+	import { getShortcutAction, shouldIgnoreGlobalShortcuts } from "$lib/utils/shortcuts";
+	import {
+		clampConsoleHeight,
+		clampSidebarWidth,
+		getResizedConsoleHeight,
+		getResizedSidebarWidth,
+	} from "$lib/utils/layout";
+	import { validatePackageSpec, type ValidatedPackageSpec } from "$lib/utils/validation";
+
+	interface InstallDialogResult {
+		allowScripts: boolean;
+	}
 
 	let code = $state(`console.log('Hello, world!')`);
 	let hashUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -17,6 +28,7 @@
 	let consoleRef: Console | null = $state(null);
 	let pendingConsoleOutput = $state<string[]>([]);
 	let shareStatus = $state<string | null>(null);
+	let initializedFromUrl = $state(false);
 
 	let consoleHeight = $state(200);
 	let sidebarWidth = $state(260);
@@ -25,6 +37,12 @@
 	let isResizingBoth = $state(false);
 	let showMobilePackages = $state(false);
 
+	let installDialogOpen = $state(false);
+	let installDialogSource = $state<"manual" | "share">("manual");
+	let installDialogPackages = $state<ValidatedPackageSpec[]>([]);
+	let installDialogResolver: ((result: InstallDialogResult | null) => void) | null = null;
+	let installDialogPromiseQueue: Promise<void> = Promise.resolve();
+
 	const isResizing = $derived(isResizingConsole || isResizingSidebar || isResizingBoth);
 	const RESIZE_STEP = 16;
 
@@ -32,7 +50,7 @@
 		initTheme();
 
 		const decoded = decodeShareUrl();
-		if (decoded) {
+		if (decoded?.code) {
 			code = decoded.code;
 		}
 
@@ -49,17 +67,37 @@
 			}
 		});
 
-		initialPackages.forEach((version, name) => {
-			void installPackage(name, version);
-		});
+		const requestedPackages = [...initialPackages.entries()]
+			.map(([name, version]) => validatePackageSpec(name, version))
+			.filter((pkg): pkg is NonNullable<typeof pkg> => pkg !== null);
 
-			return () => {
-				if (hashUpdateTimeout) clearTimeout(hashUpdateTimeout);
-				if (shareStatusTimeout) clearTimeout(shareStatusTimeout);
-			};
-		});
+		if (requestedPackages.length > 0) {
+			void queueInstallPrompt("share", requestedPackages).then(async (decision) => {
+				if (!decision) {
+					setShareStatus("Skipped share package install");
+					return;
+				}
+
+				for (const pkg of requestedPackages) {
+					await installPackage(pkg.name, pkg.version, {
+						allowScripts: decision.allowScripts,
+						source: "share",
+					});
+				}
+			});
+		}
+
+		initializedFromUrl = true;
+
+		return () => {
+			if (hashUpdateTimeout) clearTimeout(hashUpdateTimeout);
+			if (shareStatusTimeout) clearTimeout(shareStatusTimeout);
+			resolveInstallDialog(null);
+		};
+	});
 
 	$effect(() => {
+		if (!initializedFromUrl) return;
 		const currentCode = code;
 		const currentPackages = $packages;
 
@@ -95,8 +133,8 @@
 
 	function handleRun() {
 		clearConsole();
-		void runCode(code, writeToConsole).catch((e) => {
-			writeToConsole(`\n\x1b[31mError: ${e instanceof Error ? e.message : "Unknown error"}\x1b[0m\n`);
+		void runCode(code, writeToConsole).catch((error) => {
+			writeToConsole(`\n\x1b[31mError: ${error instanceof Error ? error.message : "Unknown error"}\x1b[0m\n`);
 		});
 	}
 
@@ -126,11 +164,12 @@
 		clearConsole();
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		const action = getShortcutAction(e, showMobilePackages);
+	function handleKeydown(event: KeyboardEvent) {
+		const action = getShortcutAction(event, showMobilePackages);
 		if (!action) return;
+		if (action !== "closeMobilePackages" && shouldIgnoreGlobalShortcuts(event.target)) return;
 
-		e.preventDefault();
+		event.preventDefault();
 
 		if (action === "closeMobilePackages") {
 			showMobilePackages = false;
@@ -154,7 +193,7 @@
 		}
 
 		if (action === "share") {
-			handleShare();
+			void handleShare();
 		}
 	}
 
@@ -170,12 +209,12 @@
 		isResizingBoth = true;
 	}
 
-	function handleMouseMove(e: MouseEvent) {
+	function handleMouseMove(event: MouseEvent) {
 		if (isResizingConsole || isResizingBoth) {
-			consoleHeight = getResizedConsoleHeight(window.innerHeight, e.clientY);
+			consoleHeight = getResizedConsoleHeight(window.innerHeight, event.clientY);
 		}
 		if (isResizingSidebar || isResizingBoth) {
-			sidebarWidth = getResizedSidebarWidth(window.innerWidth, e.clientX);
+			sidebarWidth = getResizedSidebarWidth(window.innerWidth, event.clientX);
 		}
 	}
 
@@ -189,13 +228,6 @@
 		showMobilePackages = !showMobilePackages;
 	}
 
-	function handleMobileOverlayKeydown(e: KeyboardEvent) {
-		if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
-			e.preventDefault();
-			showMobilePackages = false;
-		}
-	}
-
 	function adjustConsoleHeight(delta: number) {
 		consoleHeight = clampConsoleHeight(consoleHeight + delta, window.innerHeight);
 	}
@@ -204,46 +236,101 @@
 		sidebarWidth = clampSidebarWidth(sidebarWidth + delta);
 	}
 
-	function handleConsoleResizeKeydown(e: KeyboardEvent) {
-		if (e.key === "ArrowUp") {
-			e.preventDefault();
+	function handleConsoleResizeKeydown(event: KeyboardEvent) {
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
 			adjustConsoleHeight(RESIZE_STEP);
-		} else if (e.key === "ArrowDown") {
-			e.preventDefault();
+		} else if (event.key === "ArrowDown") {
+			event.preventDefault();
 			adjustConsoleHeight(-RESIZE_STEP);
 		}
 	}
 
-	function handleSidebarResizeKeydown(e: KeyboardEvent) {
-		if (e.key === "ArrowLeft") {
-			e.preventDefault();
+	function handleSidebarResizeKeydown(event: KeyboardEvent) {
+		if (event.key === "ArrowLeft") {
+			event.preventDefault();
 			adjustSidebarWidth(RESIZE_STEP);
-		} else if (e.key === "ArrowRight") {
-			e.preventDefault();
+		} else if (event.key === "ArrowRight") {
+			event.preventDefault();
 			adjustSidebarWidth(-RESIZE_STEP);
 		}
 	}
 
-	function handleBothResizeKeydown(e: KeyboardEvent) {
-		if (e.key === "ArrowUp") {
-			e.preventDefault();
+	function handleBothResizeKeydown(event: KeyboardEvent) {
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
 			adjustConsoleHeight(RESIZE_STEP);
 			return;
 		}
-		if (e.key === "ArrowDown") {
-			e.preventDefault();
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
 			adjustConsoleHeight(-RESIZE_STEP);
 			return;
 		}
-		if (e.key === "ArrowLeft") {
-			e.preventDefault();
+		if (event.key === "ArrowLeft") {
+			event.preventDefault();
 			adjustSidebarWidth(RESIZE_STEP);
 			return;
 		}
-		if (e.key === "ArrowRight") {
-			e.preventDefault();
+		if (event.key === "ArrowRight") {
+			event.preventDefault();
 			adjustSidebarWidth(-RESIZE_STEP);
 		}
+	}
+
+	async function handleInstallRequest(name: string, version: string): Promise<void> {
+		const validated = validatePackageSpec(name, version);
+		if (!validated) {
+			throw new Error("Invalid package name or version");
+		}
+
+		const decision = await queueInstallPrompt("manual", [validated]);
+		if (!decision) return;
+
+		await installPackage(validated.name, validated.version, {
+			allowScripts: decision.allowScripts,
+			source: "manual",
+		});
+	}
+
+	function queueInstallPrompt(
+		source: "manual" | "share",
+		requestedPackages: ValidatedPackageSpec[],
+	): Promise<InstallDialogResult | null> {
+		return new Promise((resolve) => {
+			const enqueue = async () => {
+				const result = await openInstallDialog(source, requestedPackages);
+				resolve(result);
+			};
+			const queued = installDialogPromiseQueue.then(enqueue, enqueue);
+			installDialogPromiseQueue = queued.then(
+				() => undefined,
+				() => undefined,
+			);
+		});
+	}
+
+	function openInstallDialog(
+		source: "manual" | "share",
+		requestedPackages: ValidatedPackageSpec[],
+	): Promise<InstallDialogResult | null> {
+		resolveInstallDialog(null);
+
+		installDialogSource = source;
+		installDialogPackages = requestedPackages;
+		installDialogOpen = true;
+
+		return new Promise((resolve) => {
+			installDialogResolver = resolve;
+		});
+	}
+
+	function resolveInstallDialog(result: InstallDialogResult | null): void {
+		if (!installDialogResolver) return;
+		const resolver = installDialogResolver;
+		installDialogResolver = null;
+		installDialogOpen = false;
+		resolver(result);
 	}
 </script>
 
@@ -255,49 +342,55 @@
 	class:select-none={isResizing}
 	class:resizing={isResizing}
 >
-		<Toolbar
-			state={$containerState}
-			onrun={handleRun}
-			onstop={handleStop}
-			onshare={handleShare}
-			sharestatus={shareStatus}
-			theme={$theme}
-			ontoggletheme={toggleTheme}
-			ontogglepackages={toggleMobilePackages}
-		/>
+	<Toolbar
+		state={$containerState}
+		onrun={handleRun}
+		onstop={handleStop}
+		onshare={handleShare}
+		sharestatus={shareStatus}
+		theme={$theme}
+		ontoggletheme={toggleTheme}
+		ontogglepackages={toggleMobilePackages}
+	/>
 
 	<div class="flex flex-col flex-1 overflow-hidden">
-			<div class="flex flex-1 min-h-0">
-				<Editor bind:value={code} />
-				<button
-					type="button"
-					class="w-1 bg-border cursor-col-resize shrink-0 hover:bg-accent hidden md:block p-0 rounded-none border-0"
-					aria-label="Resize package sidebar"
-					onmousedown={startResizeSidebar}
-					onkeydown={handleSidebarResizeKeydown}
-				></button>
-				<div class="hidden md:contents">
-					<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} width={sidebarWidth} />
-				</div>
+		<div class="flex flex-1 min-h-0">
+			<Editor bind:value={code} />
+			<button
+				type="button"
+				class="w-1 bg-border cursor-col-resize shrink-0 hover:bg-accent hidden md:block p-0 rounded-none border-0"
+				aria-label="Resize package sidebar"
+				onmousedown={startResizeSidebar}
+				onkeydown={handleSidebarResizeKeydown}
+			></button>
+			<div class="hidden md:contents">
+				<PackageSidebar
+					instanceid="desktop-packages"
+					packages={$packages}
+					oninstall={handleInstallRequest}
+					onremove={removePackage}
+					width={sidebarWidth}
+				/>
 			</div>
+		</div>
 
-			<div class="flex shrink-0">
-				<button
-					type="button"
-					class="h-1 bg-border cursor-row-resize flex-1 hover:bg-accent p-0 rounded-none border-0"
-					aria-label="Resize console height"
-					onmousedown={startResizeConsole}
-					onkeydown={handleConsoleResizeKeydown}
-				></button>
-				<button
-					type="button"
-					class="h-1 bg-border cursor-nwse-resize shrink-0 hover:bg-accent hidden md:block p-0 rounded-none border-0"
-					aria-label="Resize console and sidebar"
-					style="width: {sidebarWidth + 4}px"
-					onmousedown={startResizeBoth}
-					onkeydown={handleBothResizeKeydown}
-				></button>
-			</div>
+		<div class="flex shrink-0">
+			<button
+				type="button"
+				class="h-1 bg-border cursor-row-resize flex-1 hover:bg-accent p-0 rounded-none border-0"
+				aria-label="Resize console height"
+				onmousedown={startResizeConsole}
+				onkeydown={handleConsoleResizeKeydown}
+			></button>
+			<button
+				type="button"
+				class="h-1 bg-border cursor-nwse-resize shrink-0 hover:bg-accent hidden md:block p-0 rounded-none border-0"
+				aria-label="Resize console and sidebar"
+				style="width: {sidebarWidth + 4}px"
+				onmousedown={startResizeBoth}
+				onkeydown={handleBothResizeKeydown}
+			></button>
+		</div>
 
 		<div class="min-h-[50px]" style="height: {consoleHeight}px">
 			<Console bind:this={consoleRef} />
@@ -305,19 +398,31 @@
 	</div>
 
 	{#if showMobilePackages}
-		<div
-			class="fixed inset-0 bg-black/50 z-[100] md:hidden"
-			role="button"
-			tabindex="0"
+		<button
+			type="button"
+			class="fixed inset-0 bg-black/50 z-[100] md:hidden border-0 p-0 m-0 rounded-none"
 			onclick={toggleMobilePackages}
-			onkeydown={handleMobileOverlayKeydown}
 			aria-label="Close packages panel"
-		></div>
-		<div class="fixed top-0 right-0 bottom-0 w-[min(300px,80vw)] z-[101] bg-bg-secondary shadow-[-2px_0_8px_rgba(0,0,0,0.2)] md:hidden">
-			<PackageSidebar packages={$packages} oninstall={installPackage} onremove={removePackage} />
+		></button>
+		<div
+			class="fixed top-0 right-0 bottom-0 w-[min(300px,80vw)] z-[101] bg-bg-secondary shadow-[-2px_0_8px_rgba(0,0,0,0.2)] md:hidden"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Packages panel"
+		>
+			<PackageSidebar instanceid="mobile-packages" packages={$packages} oninstall={handleInstallRequest} onremove={removePackage} />
 		</div>
 	{/if}
 </div>
+
+<ConfirmInstallDialog
+	id="confirm-install-dialog"
+	open={installDialogOpen}
+	source={installDialogSource}
+	packages={installDialogPackages}
+	onconfirm={(allowScripts) => resolveInstallDialog({ allowScripts })}
+	oncancel={() => resolveInstallDialog(null)}
+/>
 
 <style>
 	.resizing :global(*) {
