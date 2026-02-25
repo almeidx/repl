@@ -11,8 +11,8 @@
 	}
 
 	type MonacoModule = Awaited<ReturnType<typeof loadMonaco>>;
-	type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
-	type MonacoDisposable = import("monaco-editor").IDisposable;
+	type MonacoEditor = import("monaco-editor/esm/vs/editor/editor.api").editor.IStandaloneCodeEditor;
+	type MonacoDisposable = import("monaco-editor/esm/vs/editor/editor.api").IDisposable;
 	type MonacoTsLanguage = {
 		typescriptDefaults: any;
 		ScriptTarget: any;
@@ -45,25 +45,26 @@
 			return;
 		}
 
-		const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage;
+		const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage | undefined;
+		if (typescript?.typescriptDefaults) {
+			typescript.typescriptDefaults.setCompilerOptions({
+				target: typescript.ScriptTarget.ES2022,
+				moduleResolution: typescript.ModuleResolutionKind.NodeJs,
+				module: typescript.ModuleKind.ESNext,
+				strict: true,
+				esModuleInterop: true,
+				skipLibCheck: true,
+				allowSyntheticDefaultImports: true,
+				noEmit: true,
+			});
 
-		typescript.typescriptDefaults.setCompilerOptions({
-			target: typescript.ScriptTarget.ES2022,
-			moduleResolution: typescript.ModuleResolutionKind.NodeJs,
-			module: typescript.ModuleKind.ESNext,
-			strict: true,
-			esModuleInterop: true,
-			skipLibCheck: true,
-			allowSyntheticDefaultImports: true,
-			noEmit: true,
-		});
+			typescript.typescriptDefaults.setDiagnosticsOptions({
+				noSemanticValidation: false,
+				noSyntaxValidation: false,
+			});
 
-		typescript.typescriptDefaults.setDiagnosticsOptions({
-			noSemanticValidation: false,
-			noSyntaxValidation: false,
-		});
-
-		typescript.typescriptDefaults.setEagerModelSync(false);
+			typescript.typescriptDefaults.setEagerModelSync(false);
+		}
 
 		if (!container) {
 			loadError = "Editor container failed to initialize";
@@ -72,7 +73,7 @@
 
 		editor = monaco.editor.create(container, {
 			value,
-			language: "typescript",
+			language: typescript?.typescriptDefaults ? "typescript" : "javascript",
 			theme: get(theme) === "dark" ? "vs-dark" : "vs",
 			minimap: { enabled: false },
 			fontSize: 14,
@@ -122,6 +123,8 @@
 
 	async function syncPackageTypes(pkgs: Package[]): Promise<void> {
 		if (!monaco) return;
+		const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage | undefined;
+		if (!typescript?.typescriptDefaults) return;
 
 		const runId = ++typeSyncRunId;
 		const installedVersions = new Map<string, string>();
@@ -168,7 +171,6 @@
 			typeDisposables.delete(name);
 
 			if (types) {
-				const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage;
 				const disposable = typescript.typescriptDefaults.addExtraLib(
 					types,
 					`file:///node_modules/${name}/${version}/index.d.ts`,

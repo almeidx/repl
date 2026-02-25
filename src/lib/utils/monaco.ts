@@ -1,8 +1,5 @@
-import type * as MonacoEditor from "monaco-editor";
-import CssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
+import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import HtmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
-import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 type MonacoModule = typeof MonacoEditor;
@@ -27,9 +24,6 @@ function ensureMonacoEnvironment(): void {
 		__replConfigured: true,
 		getWorker(_workerId: string, label: string): Worker {
 			if (label === "typescript" || label === "javascript") return new TsWorker();
-			if (label === "json") return new JsonWorker();
-			if (label === "css" || label === "scss" || label === "less") return new CssWorker();
-			if (label === "html" || label === "handlebars" || label === "razor") return new HtmlWorker();
 			return new EditorWorker();
 		},
 	};
@@ -40,7 +34,8 @@ export async function loadMonaco(): Promise<MonacoModule> {
 
 	monacoPromise = (async () => {
 		ensureMonacoEnvironment();
-		const monaco = await import("monaco-editor");
+		const monaco = await import("monaco-editor/esm/vs/editor/editor.api");
+		await import("monaco-editor/esm/vs/language/typescript/monaco.contribution");
 		return monaco;
 	})().catch((error) => {
 		monacoPromise = null;
