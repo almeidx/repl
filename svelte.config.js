@@ -33,11 +33,7 @@ export default {
 				"base-uri": ["self"],
 				"form-action": ["self"],
 				"frame-ancestors": ["none"],
-				"frame-src": [
-					"https://stackblitz.com",
-					"https://*.stackblitz.com",
-					"https://*.w-corp-staticblitz.com",
-				],
+				"frame-src": ["https://stackblitz.com", "https://*.stackblitz.com", "https://*.w-corp-staticblitz.com"],
 				"object-src": ["none"],
 				"script-src": isDev ? ["self", "unsafe-inline", "unsafe-eval"] : ["self"],
 				"style-src": ["self", "unsafe-inline"],
