@@ -3,6 +3,7 @@ import { normalizePackageName, normalizePackageVersion } from "./validation";
 
 const JSDELIVR_BASE = "https://cdn.jsdelivr.net/npm";
 const TYPES_CACHE_TTL_MS = 15 * 60 * 1000;
+const TYPES_CACHE_MAX_ENTRIES = 200;
 
 interface PackageJson {
 	types?: string;
@@ -13,15 +14,41 @@ interface PackageJson {
 const typeCache = new Map<string, { expiresAt: number; data: string | null }>();
 const inFlightTypeFetches = new Map<string, Promise<string | null>>();
 
+function readCachedTypeResult(cacheKey: string, now: number): string | null | undefined {
+	const cached = typeCache.get(cacheKey);
+	if (!cached) return undefined;
+	if (cached.expiresAt <= now) {
+		typeCache.delete(cacheKey);
+		return undefined;
+	}
+	typeCache.delete(cacheKey);
+	typeCache.set(cacheKey, cached);
+	return cached.data;
+}
+
+function pruneTypeCache(now: number): void {
+	for (const [cacheKey, entry] of typeCache.entries()) {
+		if (entry.expiresAt <= now) {
+			typeCache.delete(cacheKey);
+		}
+	}
+
+	while (typeCache.size > TYPES_CACHE_MAX_ENTRIES) {
+		const oldestCacheKey = typeCache.keys().next().value as string | undefined;
+		if (!oldestCacheKey) break;
+		typeCache.delete(oldestCacheKey);
+	}
+}
+
 export async function fetchPackageTypes(name: string, version: string): Promise<string | null> {
 	const pkgName = normalizePackageName(name);
 	const pkgVersion = normalizePackageVersion(version);
 	if (!pkgName || !pkgVersion) return null;
 
 	const cacheKey = `${pkgName}@${pkgVersion}`;
-	const cached = typeCache.get(cacheKey);
-	if (cached && cached.expiresAt > Date.now()) {
-		return cached.data;
+	const cached = readCachedTypeResult(cacheKey, Date.now());
+	if (cached !== undefined) {
+		return cached;
 	}
 
 	const existingRequest = inFlightTypeFetches.get(cacheKey);
@@ -86,8 +113,11 @@ async function tryFetchDefinitelyTyped(name: string): Promise<string | null> {
 }
 
 function cacheTypeResult(cacheKey: string, value: string | null): void {
+	const now = Date.now();
+	pruneTypeCache(now);
 	typeCache.set(cacheKey, {
-		expiresAt: Date.now() + TYPES_CACHE_TTL_MS,
+		expiresAt: now + TYPES_CACHE_TTL_MS,
 		data: value,
 	});
+	pruneTypeCache(now);
 }
