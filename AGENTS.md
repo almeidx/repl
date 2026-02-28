@@ -52,9 +52,8 @@ src/
 ├── hooks.server.ts       # COEP/COOP headers for SSR
 ├── app.css               # Global styles & CSS variables
 ├── app.html              # HTML template
-└── app.d.ts              # TypeScript declarations
-static/
-└── _headers              # Cloudflare headers for static assets
+├── app.d.ts              # TypeScript declarations
+└── _headers              # Cloudflare headers for Cloudflare assets
 ```
 
 ## Key Concepts
@@ -75,7 +74,7 @@ WebContainers require SharedArrayBuffer, which needs:
 
 Set in two places:
 1. `hooks.server.ts` - for server-rendered responses
-2. `static/_headers` - for static assets on Cloudflare
+2. `_headers` (project root) - for Cloudflare assets
 
 ### URL State
 
