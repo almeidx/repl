@@ -67,7 +67,7 @@ pnpm test:smoke
 | `Cmd/Ctrl + Enter` | Run code |
 | `Cmd/Ctrl + .` | Stop execution |
 | `Cmd/Ctrl + K` | Clear console |
-| `Cmd/Ctrl + Shift + C` | Copy share URL |
+| `Cmd/Ctrl + Shift + U` | Copy share URL |
 
 ## Deployment
 

@@ -19,7 +19,7 @@ export function getShortcutAction(event: KeyboardEvent, isMobilePackagesOpen: bo
 	if (event.key === "Enter") return "run";
 	if (event.key === ".") return "stop";
 	if (event.key.toLowerCase() === "k") return "clearConsole";
-	if (event.shiftKey && event.key.toUpperCase() === "C") return "share";
+	if (event.shiftKey && event.key.toUpperCase() === "U") return "share";
 
 	return null;
 }

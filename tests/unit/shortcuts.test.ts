@@ -24,7 +24,7 @@ describe("shortcut utils", () => {
 
 	it("maps clear and share shortcuts with case-insensitive keys", () => {
 		expect(getShortcutAction(keyboardEvent({ key: "K", metaKey: true }), false)).toBe("clearConsole");
-		expect(getShortcutAction(keyboardEvent({ key: "c", ctrlKey: true, shiftKey: true }), false)).toBe("share");
+		expect(getShortcutAction(keyboardEvent({ key: "u", ctrlKey: true, shiftKey: true }), false)).toBe("share");
 	});
 
 	it("returns null when no shortcut matches", () => {
