@@ -9,10 +9,11 @@ export interface ContainerState {
 export const containerState = writable<ContainerState>({ status: "idle" });
 
 let webcontainer: WebContainer | null = null;
-let currentProcess: Awaited<ReturnType<WebContainer["spawn"]>> | null = null;
-let executionTimeout: ReturnType<typeof setTimeout> | null = null;
+let currentProcess: { runId: number; process: Awaited<ReturnType<WebContainer["spawn"]>> } | null = null;
+let executionTimeout: { runId: number; timeout: ReturnType<typeof setTimeout> } | null = null;
 let bootPromise: Promise<void> | null = null;
 let activeTask: "running" | "packages" | null = null;
+let currentRunId = 0;
 
 const EXECUTION_TIMEOUT_MS = 30000;
 
@@ -72,16 +73,34 @@ async function bootContainer(): Promise<void> {
 	} catch (e) {
 		containerState.set({
 			status: "error",
-			error: "Failed to start. Try refreshing the page.",
+			error: "Failed to start. Try running again or refreshing the page.",
 		});
 		throw e;
 	}
 }
 
+function resetAfterBootError(): void {
+	clearExecutionTimeout();
+	currentProcess = null;
+	activeTask = null;
+	bootPromise = null;
+	if (webcontainer) {
+		try {
+			webcontainer.teardown();
+		} catch {
+			// Ignore teardown errors while recovering from a failed boot.
+		}
+		webcontainer = null;
+	}
+	containerState.set({ status: "idle" });
+}
+
 export async function ensureBooted(): Promise<void> {
 	const state = get(containerState);
-	if (state.status === "ready" || state.status === "running") return;
-	if (state.status === "error") throw new Error(state.error);
+	if (state.status === "ready" || state.status === "running" || state.status === "installing") return;
+	if (state.status === "error") {
+		resetAfterBootError();
+	}
 
 	if (!bootPromise) {
 		bootPromise = bootContainer().catch((error) => {
@@ -92,14 +111,16 @@ export async function ensureBooted(): Promise<void> {
 	await bootPromise;
 }
 
-function clearExecutionTimeout(): void {
+function clearExecutionTimeout(runId?: number): void {
 	if (executionTimeout) {
-		clearTimeout(executionTimeout);
+		if (runId !== undefined && executionTimeout.runId !== runId) return;
+		clearTimeout(executionTimeout.timeout);
 		executionTimeout = null;
 	}
 }
 
-function setReadyState(): void {
+function setReadyState(runId?: number): void {
+	if (runId !== undefined && runId !== currentRunId) return;
 	if (get(containerState).status !== "error") {
 		containerState.set({ status: "ready" });
 	}
@@ -130,19 +151,28 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
 		return;
 	}
 
-	if (get(containerState).status !== "ready") {
+	const status = get(containerState).status;
+	if (status !== "ready") {
 		releaseTask("running");
+		if (status === "installing") {
+			onOutput("\n\x1b[33mPackage installation is in progress. Run again when it finishes.\x1b[0m\n");
+		} else {
+			onOutput("\n\x1b[33mContainer is busy. Please wait for the current task to finish.\x1b[0m\n");
+		}
 		return;
 	}
 
+	const runId = ++currentRunId;
 	containerState.set({ status: "running" });
 
 	try {
 		await webcontainer!.fs.writeFile("index.ts", code);
 
-		currentProcess = await webcontainer!.spawn("./node_modules/.bin/tsx", ["index.ts"]);
+		const process = await webcontainer!.spawn("./node_modules/.bin/tsx", ["index.ts"]);
+		currentProcess = { runId, process };
+		let timedOut = false;
 
-		const outputPipe = currentProcess.output
+		const outputPipe = process.output
 			.pipeTo(
 				new WritableStream({
 					write(data) {
@@ -154,33 +184,40 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
 				// Stream may close abruptly when process is terminated; safe to ignore.
 			});
 
-		executionTimeout = setTimeout(() => {
-			onOutput("\n\x1b[33mExecution timed out after 30 seconds\x1b[0m\n");
-			stopExecution();
-		}, EXECUTION_TIMEOUT_MS);
+		executionTimeout = {
+			runId,
+			timeout: setTimeout(() => {
+				timedOut = true;
+				onOutput("\n\x1b[33mExecution timed out after 30 seconds\x1b[0m\n");
+				stopExecution();
+			}, EXECUTION_TIMEOUT_MS),
+		};
 
-		const exitCode = await currentProcess.exit;
+		const exitCode = await process.exit;
 		await outputPipe;
 
-		if (exitCode !== 0) {
+		if (exitCode !== 0 && !timedOut) {
 			onOutput(`\n\x1b[31mProcess exited with code ${exitCode}\x1b[0m\n`);
 		}
 	} catch (e) {
 		onOutput(`\n\x1b[31mError: ${e instanceof Error ? e.message : "Unknown error"}\x1b[0m\n`);
 	} finally {
-		clearExecutionTimeout();
-		currentProcess = null;
+		clearExecutionTimeout(runId);
+		if (currentProcess?.runId === runId) {
+			currentProcess = null;
+		}
 		releaseTask("running");
-		setReadyState();
+		setReadyState(runId);
 	}
 }
 
 export function stopExecution(): void {
 	clearExecutionTimeout();
 	if (currentProcess) {
-		currentProcess.kill();
+		currentProcess.process.kill();
 		currentProcess = null;
 	}
+	releaseTask("running");
 	if (get(containerState).status === "running") {
 		containerState.set({ status: "ready" });
 	}
