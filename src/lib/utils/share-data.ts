@@ -1,5 +1,5 @@
 import type { Package } from "$lib/stores/packages";
-import { sanitizeShareData, validatePackageSpec, type ValidatedShareData } from "./validation";
+import { MAX_SHARE_CODE_CHARS, sanitizeShareData, validatePackageSpec, type ValidatedShareData } from "./validation";
 
 export type ShareData = ValidatedShareData;
 
@@ -19,6 +19,10 @@ function decodeBase64(input: string): string {
 }
 
 export function encodeShareData(code: string, packages: Package[]): string {
+	if (code.length > MAX_SHARE_CODE_CHARS) {
+		throw new RangeError(`Code exceeds maximum share size of ${MAX_SHARE_CODE_CHARS} characters`);
+	}
+
 	const data: ShareData = { code };
 
 	const installedPackages = packages

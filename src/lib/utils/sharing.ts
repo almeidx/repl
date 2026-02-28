@@ -8,7 +8,12 @@ export function encodeShareUrl(code: string, packages: Package[]): string {
 }
 
 export function updateUrlHash(code: string, packages: Package[]): void {
-	const encoded = encodeShareData(code, packages);
+	let encoded: string;
+	try {
+		encoded = encodeShareData(code, packages);
+	} catch {
+		return;
+	}
 	if (window.location.hash.slice(1) === encoded) return;
 	const nextUrl = `${window.location.pathname}${window.location.search}#${encoded}`;
 	replaceState(nextUrl, {});

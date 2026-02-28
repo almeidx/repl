@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decodeShareData, encodeShareData, parsePackagesFromSearch } from "../../src/lib/utils/share-data";
+import { MAX_SHARE_CODE_CHARS } from "../../src/lib/utils/validation";
 
 describe("share-data utils", () => {
 	it("encodes and decodes share payload with installed packages only", () => {
@@ -17,6 +18,10 @@ describe("share-data utils", () => {
 
 	it("returns null for invalid share data", () => {
 		expect(decodeShareData("not-base64-data")).toBeNull();
+	});
+
+	it("rejects oversized share payloads during encoding", () => {
+		expect(() => encodeShareData("x".repeat(MAX_SHARE_CODE_CHARS + 1), [])).toThrowError(RangeError);
 	});
 
 	it("returns null for payloads with invalid shape", () => {

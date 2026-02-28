@@ -151,11 +151,15 @@
 	}
 
 	async function handleShare() {
-		const url = encodeShareUrl(code, $packages);
 		try {
+			const url = encodeShareUrl(code, $packages);
 			await navigator.clipboard.writeText(url);
 			setShareStatus("Share URL copied");
-		} catch {
+		} catch (error) {
+			if (error instanceof RangeError) {
+				setShareStatus("Code is too large to share");
+				return;
+			}
 			setShareStatus("Failed to copy share URL");
 		}
 	}
