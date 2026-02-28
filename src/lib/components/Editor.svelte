@@ -31,8 +31,16 @@
 	const typeDisposables = new Map<string, MonacoDisposable>();
 	const resolvedTypeVersions = new Map<string, string>();
 	let typeSyncRunId = 0;
+	let currentTheme = get(theme);
 
 	onMount(async () => {
+		unsubscribeTheme = theme.subscribe((nextTheme) => {
+			currentTheme = nextTheme;
+			if (monaco) {
+				monaco.editor.setTheme(nextTheme === "dark" ? "vs-dark" : "vs");
+			}
+		});
+
 		try {
 			monaco = await loadMonaco();
 		} catch (error) {
@@ -74,7 +82,7 @@
 		editor = monaco.editor.create(container, {
 			value,
 			language: typescript?.typescriptDefaults ? "typescript" : "javascript",
-			theme: get(theme) === "dark" ? "vs-dark" : "vs",
+			theme: currentTheme === "dark" ? "vs-dark" : "vs",
 			minimap: { enabled: false },
 			fontSize: 14,
 			lineNumbers: "on",
@@ -87,12 +95,6 @@
 
 		editor.onDidChangeModelContent(() => {
 			value = editor?.getValue() ?? value;
-		});
-
-		unsubscribeTheme = theme.subscribe((currentTheme) => {
-			if (monaco && editor) {
-				monaco.editor.setTheme(currentTheme === "dark" ? "vs-dark" : "vs");
-			}
 		});
 
 		unsubscribePackages = packages.subscribe((pkgs) => {
