@@ -6,6 +6,13 @@ export interface NpmPackageVersions {
 	latest: string;
 }
 
+interface NpmVersionMetadataResponse {
+	versions?: Record<string, unknown>;
+	"dist-tags"?: {
+		latest?: string;
+	};
+}
+
 const VERSION_CACHE_TTL_MS = 5 * 60 * 1000;
 const versionCache = new Map<string, { expiresAt: number; data: NpmPackageVersions }>();
 
@@ -20,13 +27,17 @@ export async function fetchPackageVersions(packageName: string): Promise<NpmPack
 		return cached.data;
 	}
 
-	const response = await fetchWithTimeout(`https://registry.npmjs.org/${encodeURIComponent(normalizedName)}`);
+	const response = await fetchWithTimeout(`https://registry.npmjs.org/${encodeURIComponent(normalizedName)}`, {
+		headers: {
+			Accept: "application/vnd.npm.install-v1+json",
+		},
+	});
 
 	if (!response.ok) {
 		throw new Error(`Package "${normalizedName}" not found`);
 	}
 
-	const data = await response.json();
+	const data = (await response.json()) as NpmVersionMetadataResponse;
 	const versions = Object.keys(data.versions || {}).reverse();
 	const latest = data["dist-tags"]?.latest || versions[0] || "";
 
