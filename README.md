@@ -80,6 +80,10 @@ Deployed to Cloudflare Workers. Requires:
 pnpm run deploy
 ```
 
+## Security Notes
+
+- CSP includes `style-src 'unsafe-inline'` because Monaco and xterm rely on runtime-injected styles.
+
 ## Architecture
 
 - **SvelteKit** - Framework
