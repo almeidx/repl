@@ -3,6 +3,13 @@
 .wrangler/
 wrangler-local-state/
 dist/
+build/
 node_modules/
 playwright-report/
 test-results/
+coverage/
+.env
+.env.*
+!.env.example
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

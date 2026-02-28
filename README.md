@@ -33,18 +33,17 @@ Open http://localhost:5173
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start development server |
-| `pnpm build` | Build for production |
-| `pnpm preview` | Preview with Wrangler locally |
-| `pnpm run deploy` | Build and deploy to Cloudflare |
-| `pnpm lint` | Run oxlint checks |
-| `pnpm format` | Format TS/JS files with oxfmt |
-| `pnpm format:check` | Verify TS/JS formatting with oxfmt |
-| `pnpm check` | Run type checking |
-| `pnpm test:unit` | Run unit tests (Vitest) |
-| `pnpm test:smoke` | Run Playwright smoke test |
+| Command           | Description                     |
+| ----------------- | ------------------------------- |
+| `pnpm dev`        | Start development server        |
+| `pnpm build`      | Build for production            |
+| `pnpm preview`    | Preview with Wrangler locally   |
+| `pnpm run deploy` | Build and deploy to Cloudflare  |
+| `pnpm lint`       | Check formatting and lint rules |
+| `pnpm fmt`        | Format and auto-fix lint issues |
+| `pnpm check`      | Run type checking               |
+| `pnpm test:unit`  | Run unit tests (Vitest)         |
+| `pnpm test:smoke` | Run Playwright smoke test       |
 
 ## Testing
 
@@ -62,11 +61,11 @@ pnpm test:smoke
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd/Ctrl + Enter` | Run code |
-| `Cmd/Ctrl + .` | Stop execution |
-| `Cmd/Ctrl + K` | Clear console |
+| Shortcut               | Action         |
+| ---------------------- | -------------- |
+| `Cmd/Ctrl + Enter`     | Run code       |
+| `Cmd/Ctrl + .`         | Stop execution |
+| `Cmd/Ctrl + K`         | Clear console  |
 | `Cmd/Ctrl + Shift + U` | Copy share URL |
 
 ## Deployment

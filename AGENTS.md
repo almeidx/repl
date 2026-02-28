@@ -69,10 +69,12 @@ States: `idle` → `booting` → `ready` ↔ `running` (or `error`)
 ### Cross-Origin Isolation
 
 WebContainers require SharedArrayBuffer, which needs:
+
 - `Cross-Origin-Embedder-Policy: require-corp`
 - `Cross-Origin-Opener-Policy: same-origin`
 
 Set in two places:
+
 1. `hooks.server.ts` - for server-rendered responses
 2. `_headers` (project root) - for Cloudflare assets
 
@@ -94,17 +96,21 @@ CSS variables defined in `app.css`. Theme state in `theme.ts` store. Components 
 ## Common Tasks
 
 ### Adding a new component
+
 1. Create in `src/lib/components/`
 2. Use Svelte 5 runes syntax
 3. Define Props interface for type safety
 
 ### Modifying execution behavior
+
 Edit `src/lib/utils/webcontainer.ts`. Key functions:
+
 - `bootContainer()` - initial setup
 - `runCode()` - execute user code
 - `installPackageInContainer()` - npm install
 
 ### Changing UI layout
+
 Main layout in `src/routes/+page.svelte`. Resizable panels use mouse event handlers with min/max constraints.
 
 ## Build & Deploy
