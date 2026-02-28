@@ -13,10 +13,12 @@
 	let initPromise: Promise<void> | null = null
 	let isMounted = false
 	let pendingWrites: string[] = []
+	let pendingWriteChars = 0
 	let clearRequested = false
 	let outputText = $state("")
 
 	const MAX_OUTPUT_CHARS = 40_000
+	const MAX_PENDING_WRITE_CHARS = 20_000
 
 	const DARK_THEME = {
 		background: '#1e1e1e',
@@ -47,7 +49,7 @@
 		terminal = null
 		unsubscribeTheme?.()
 		unsubscribeTheme = null
-		pendingWrites = []
+		resetPendingWrites()
 	})
 
 	export function write(data: string) {
@@ -58,8 +60,8 @@
 			return
 		}
 
-		pendingWrites.push(data)
-		void ensureTerminal()
+		queuePendingWrite(data)
+		void ensureTerminal().catch(() => {})
 	}
 
 	export function clear() {
@@ -71,8 +73,8 @@
 		}
 
 		clearRequested = true
-		pendingWrites = []
-		void ensureTerminal()
+		resetPendingWrites()
+		void ensureTerminal().catch(() => {})
 	}
 
 	async function ensureTerminal(): Promise<void> {
@@ -120,27 +122,42 @@
 				}
 			})
 
-			if (clearRequested) {
-				terminal.clear()
-				clearRequested = false
-			}
-
-			if (pendingWrites.length > 0) {
-				for (const chunk of pendingWrites) {
-					terminal.write(chunk)
+				if (clearRequested) {
+					terminal.clear()
+					clearRequested = false
 				}
-				pendingWrites = []
-			}
-		})().finally(() => {
-			initPromise = null
-		})
+
+				if (pendingWrites.length > 0) {
+					for (const chunk of pendingWrites) {
+						terminal.write(chunk)
+					}
+					resetPendingWrites()
+				}
+			})().finally(() => {
+				initPromise = null
+			})
 
 		await initPromise
 	}
 
 	function appendOutput(chunk: string) {
-		const plainText = chunk.replace(/\x1b\[[0-9;]*m/g, "")
+		const plainText = chunk.replace(/\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07/g, "")
 		outputText = `${outputText}${plainText}`.slice(-MAX_OUTPUT_CHARS)
+	}
+
+	function queuePendingWrite(chunk: string) {
+		pendingWrites.push(chunk)
+		pendingWriteChars += chunk.length
+		while (pendingWriteChars > MAX_PENDING_WRITE_CHARS && pendingWrites.length > 0) {
+			const removed = pendingWrites.shift()
+			if (!removed) break
+			pendingWriteChars -= removed.length
+		}
+	}
+
+	function resetPendingWrites() {
+		pendingWrites = []
+		pendingWriteChars = 0
 	}
 </script>
 
