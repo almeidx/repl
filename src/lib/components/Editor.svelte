@@ -101,8 +101,6 @@
 		unsubscribePackages = packages.subscribe((pkgs) => {
 			void syncPackageTypes(pkgs);
 		});
-
-		void syncPackageTypes(get(packages));
 	});
 
 	onDestroy(() => {
