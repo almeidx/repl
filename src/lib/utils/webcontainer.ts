@@ -98,7 +98,7 @@ function resetAfterBootError(): void {
 export async function ensureBooted(): Promise<void> {
 	const state = get(containerState);
 	if (state.status === "ready" || state.status === "running" || state.status === "installing") return;
-	if (state.status === "error") {
+	if (state.status === "error" && !bootPromise) {
 		resetAfterBootError();
 	}
 
