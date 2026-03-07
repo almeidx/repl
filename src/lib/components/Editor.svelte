@@ -4,22 +4,16 @@
 	import { theme } from "$lib/stores/theme";
 	import { packages, type Package } from "$lib/stores/packages";
 	import { fetchPackageTypes } from "$lib/utils/types";
-	import { loadMonaco } from "$lib/utils/monaco";
+	import { loadMonaco, type MonacoLoadResult } from "$lib/utils/monaco";
 
 	interface Props {
 		value: string;
 	}
 
-	type MonacoModule = Awaited<ReturnType<typeof loadMonaco>>;
+	type MonacoModule = MonacoLoadResult["monaco"];
 	type MonacoEditor = import("monaco-editor/esm/vs/editor/editor.api").editor.IStandaloneCodeEditor;
 	type MonacoDisposable = import("monaco-editor/esm/vs/editor/editor.api").IDisposable;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Monaco's TypeScript language API types are not exported from the ESM entry point
-	type MonacoTsLanguage = {
-		typescriptDefaults: any;
-		ScriptTarget: any;
-		ModuleResolutionKind: any;
-		ModuleKind: any;
-	};
+	type TsContribution = NonNullable<MonacoLoadResult["typescript"]>;
 
 	let { value = $bindable() }: Props = $props();
 
@@ -27,6 +21,7 @@
 	let loadError = $state<string | null>(null);
 	let editor: MonacoEditor | null = null;
 	let monaco: MonacoModule | null = null;
+	let tsContribution: TsContribution | null = null;
 	let unsubscribeTheme: (() => void) | null = null;
 	let unsubscribePackages: (() => void) | null = null;
 	const typeDisposables = new Map<string, MonacoDisposable>();
@@ -43,7 +38,9 @@
 		});
 
 		try {
-			monaco = await loadMonaco();
+			const result = await loadMonaco();
+			monaco = result.monaco;
+			tsContribution = result.typescript;
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : "Failed to load Monaco editor";
 			return;
@@ -54,12 +51,11 @@
 			return;
 		}
 
-		const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage | undefined;
-		if (typescript?.typescriptDefaults) {
-			typescript.typescriptDefaults.setCompilerOptions({
-				target: typescript.ScriptTarget.ES2022,
-				moduleResolution: typescript.ModuleResolutionKind.NodeJs,
-				module: typescript.ModuleKind.ESNext,
+		if (tsContribution) {
+			tsContribution.typescriptDefaults.setCompilerOptions({
+				target: tsContribution.ScriptTarget.ES2022,
+				moduleResolution: tsContribution.ModuleResolutionKind.NodeJs,
+				module: tsContribution.ModuleKind.ESNext,
 				strict: true,
 				esModuleInterop: true,
 				skipLibCheck: true,
@@ -67,12 +63,12 @@
 				noEmit: true,
 			});
 
-			typescript.typescriptDefaults.setDiagnosticsOptions({
+			tsContribution.typescriptDefaults.setDiagnosticsOptions({
 				noSemanticValidation: false,
 				noSyntaxValidation: false,
 			});
 
-			typescript.typescriptDefaults.setEagerModelSync(false);
+			tsContribution.typescriptDefaults.setEagerModelSync(false);
 		}
 
 		if (!container) {
@@ -82,7 +78,7 @@
 
 		editor = monaco.editor.create(container, {
 			value,
-			language: typescript?.typescriptDefaults ? "typescript" : "javascript",
+			language: tsContribution ? "typescript" : "javascript",
 			theme: currentTheme === "dark" ? "vs-dark" : "vs",
 			minimap: { enabled: false },
 			fontSize: 14,
@@ -123,9 +119,7 @@
 	});
 
 	async function syncPackageTypes(pkgs: Package[]): Promise<void> {
-		if (!monaco) return;
-		const typescript = monaco.languages.typescript as unknown as MonacoTsLanguage | undefined;
-		if (!typescript?.typescriptDefaults) return;
+		if (!monaco || !tsContribution) return;
 
 		const runId = ++typeSyncRunId;
 		const installedVersions = new Map<string, string>();
@@ -162,7 +156,7 @@
 			}),
 		);
 
-		if (runId !== typeSyncRunId || !monaco) return;
+		if (runId !== typeSyncRunId || !tsContribution) return;
 
 		for (const { name, version, types } of fetchedTypes) {
 			if (installedVersions.get(name) !== version) continue;
@@ -172,7 +166,7 @@
 			typeDisposables.delete(name);
 
 			if (types) {
-				const disposable = typescript.typescriptDefaults.addExtraLib(
+				const disposable = tsContribution.typescriptDefaults.addExtraLib(
 					types,
 					`file:///node_modules/${name}/${version}/index.d.ts`,
 				);
