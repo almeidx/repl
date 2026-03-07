@@ -1,5 +1,6 @@
 import { writable, get } from "svelte/store";
 import type { WebContainer } from "@webcontainer/api";
+import { normalizePackageName } from "$lib/utils/validation";
 
 export interface ContainerState {
 	status: "idle" | "booting" | "ready" | "running" | "installing" | "error";
@@ -285,6 +286,7 @@ export async function installPackageInContainer(
 }
 
 export async function uninstallPackageInContainer(name: string): Promise<void> {
+	if (!normalizePackageName(name)) throw new Error("Invalid package name");
 	await ensureBooted();
 
 	if (!tryAcquireTask("packages")) throw new Error("Container busy");

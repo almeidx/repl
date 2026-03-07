@@ -59,7 +59,7 @@ async function tryFetchBundledTypes(name: string, version: string): Promise<stri
 		const pkgJson: PackageJson = await res.json();
 		const typesPath = pkgJson.types || pkgJson.typings;
 
-		if (!typesPath) return null;
+		if (!typesPath || typeof typesPath !== "string" || typesPath.includes("..")) return null;
 
 		const typesUrl = `${JSDELIVR_BASE}/${name}@${version}/${typesPath}`;
 		const typesRes = await fetchWithTimeout(typesUrl);
