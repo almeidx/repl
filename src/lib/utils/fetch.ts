@@ -14,7 +14,7 @@ export async function fetchWithTimeout(
 	if (init.signal) {
 		if (init.signal.aborted) {
 			clearTimeout(timeout);
-			throw init.signal.reason;
+			throw init.signal.reason ?? new DOMException("The operation was aborted", "AbortError");
 		}
 
 		const onAbort = () => {
