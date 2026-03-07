@@ -1,3 +1,7 @@
+// WARNING: Do NOT add a Content-Security-Policy header here.
+// WebContainers require dynamic connections to StackBlitz service URLs, use
+// internal iframes, eval(), and WASM. A CSP breaks WebContainer boot/execution.
+// This has been attempted and reverted multiple times.
 export function applySecurityHeaders(response: Response): void {
 	response.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
 	response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
