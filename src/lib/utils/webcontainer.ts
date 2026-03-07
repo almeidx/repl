@@ -266,8 +266,13 @@ export async function installPackageInContainer(
 		}
 
 		const pkgJsonContent = await getContainer().fs.readFile("package.json", "utf-8");
-		const pkgJson = JSON.parse(pkgJsonContent);
-		const installedVersion = pkgJson.dependencies?.[name];
+		let installedVersion: string | undefined;
+		try {
+			const pkgJson = JSON.parse(pkgJsonContent) as { dependencies?: Record<string, string> };
+			installedVersion = pkgJson.dependencies?.[name];
+		} catch {
+			// package.json may be malformed after install; fall back to requested version
+		}
 
 		if (installedVersion) {
 			return installedVersion.replace(/^[\^~]/, "");
