@@ -111,8 +111,13 @@
 			terminal.open(container)
 			fitAddon.fit()
 
+			let resizeRaf: number | null = null
 			resizeObserver = new ResizeObserver(() => {
-				fitAddon?.fit()
+				if (resizeRaf) return
+				resizeRaf = requestAnimationFrame(() => {
+					resizeRaf = null
+					fitAddon?.fit()
+				})
 			})
 			resizeObserver.observe(container)
 
@@ -122,17 +127,17 @@
 				}
 			})
 
-				if (clearRequested) {
-					terminal.clear()
-					clearRequested = false
-				}
+			if (clearRequested) {
+				terminal.clear()
+				clearRequested = false
+			}
 
-				if (pendingWrites.length > 0) {
-					for (const chunk of pendingWrites) {
-						terminal.write(chunk)
-					}
-					resetPendingWrites()
+			if (pendingWrites.length > 0) {
+				for (const chunk of pendingWrites) {
+					terminal.write(chunk)
 				}
+				resetPendingWrites()
+			}
 			})().finally(() => {
 				initPromise = null
 			})
