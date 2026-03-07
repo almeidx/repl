@@ -78,6 +78,8 @@ Set in two places:
 1. `hooks.server.ts` - for server-rendered responses
 2. `_headers` (project root) - for Cloudflare assets
 
+**Do NOT add a Content-Security-Policy (CSP) header.** WebContainers dynamically connect to StackBlitz service URLs, use internal iframes, `eval()`, and WASM — all of which are blocked by standard CSP directives. This has been attempted and reverted multiple times.
+
 ### URL State
 
 Code and packages auto-sync to URL hash (500ms debounce). Format: base64-encoded JSON with `code` and `packages` fields.
