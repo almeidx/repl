@@ -72,19 +72,23 @@
 			.filter((pkg): pkg is NonNullable<typeof pkg> => pkg !== null);
 
 		if (requestedPackages.length > 0) {
-			void queueInstallPrompt("share", requestedPackages).then(async (decision) => {
-				if (!decision) {
-					setShareStatus("Skipped share package install");
-					return;
-				}
+			void queueInstallPrompt("share", requestedPackages)
+				.then(async (decision) => {
+					if (!decision) {
+						setShareStatus("Skipped share package install");
+						return;
+					}
 
-				for (const pkg of requestedPackages) {
-					await installPackage(pkg.name, pkg.version, {
-						allowScripts: decision.allowScripts,
-						source: "share",
-					});
-				}
-			});
+					for (const pkg of requestedPackages) {
+						await installPackage(pkg.name, pkg.version, {
+							allowScripts: decision.allowScripts,
+							source: "share",
+						});
+					}
+				})
+				.catch(() => {
+					setShareStatus("Failed to install shared packages");
+				});
 		}
 
 		initializedFromUrl = true;
@@ -214,6 +218,7 @@
 	}
 
 	function handleMouseMove(event: MouseEvent) {
+		if (!isResizing) return;
 		if (isResizingConsole || isResizingBoth) {
 			consoleHeight = getResizedConsoleHeight(window.innerHeight, event.clientY);
 		}
