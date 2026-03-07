@@ -1,6 +1,6 @@
 import { replaceState } from "$app/navigation";
 import type { Package } from "$lib/stores/packages";
-import { decodeShareData, encodeShareData, parsePackagesFromSearch, type ShareData } from "./share-data";
+import { decodeShareData, encodeShareData, parsePackagesFromSearch, type ValidatedShareData } from "./share-data";
 
 export function encodeShareUrl(code: string, packages: Package[]): string {
 	const encoded = encodeShareData(code, packages);
@@ -19,7 +19,7 @@ export function updateUrlHash(code: string, packages: Package[]): void {
 	replaceState(nextUrl, {});
 }
 
-export function decodeShareUrl(): ShareData | null {
+export function decodeShareUrl(): ValidatedShareData | null {
 	const hash = window.location.hash.slice(1);
 	return decodeShareData(hash);
 }

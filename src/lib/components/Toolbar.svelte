@@ -18,9 +18,8 @@
 	const isIdle = $derived(state.status === "idle");
 	const isBooting = $derived(state.status === "booting");
 	const isInstalling = $derived(state.status === "installing");
-	const isReady = $derived(state.status === "ready");
 	const isRunning = $derived(state.status === "running");
-	const canRun = $derived(isIdle || isReady);
+	const canRun = $derived(isIdle || state.status === "ready");
 </script>
 
 <div class="flex items-center justify-between px-3 py-2 bg-bg-secondary border-b border-border gap-2">
