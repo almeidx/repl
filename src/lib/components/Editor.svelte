@@ -13,6 +13,7 @@
 	type MonacoModule = Awaited<ReturnType<typeof loadMonaco>>;
 	type MonacoEditor = import("monaco-editor/esm/vs/editor/editor.api").editor.IStandaloneCodeEditor;
 	type MonacoDisposable = import("monaco-editor/esm/vs/editor/editor.api").IDisposable;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Monaco's TypeScript language API types are not exported from the ESM entry point
 	type MonacoTsLanguage = {
 		typescriptDefaults: any;
 		ScriptTarget: any;

@@ -4,10 +4,8 @@
 	import { get } from 'svelte/store'
 
 	let container: HTMLDivElement
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let terminal: any = null
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let fitAddon: any = null
+	let terminal: import("@xterm/xterm").Terminal | null = null
+	let fitAddon: import("@xterm/addon-fit").FitAddon | null = null
 	let unsubscribeTheme: (() => void) | null = null
 	let resizeObserver: ResizeObserver | null = null
 	let initPromise: Promise<void> | null = null
