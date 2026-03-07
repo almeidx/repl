@@ -100,9 +100,8 @@
 		versionApi.setOpen(false);
 	}
 
-	function handleNameInput(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		packageName = input.value;
+	function handleNameInput(event: Event & { currentTarget: HTMLInputElement }) {
+		packageName = event.currentTarget.value;
 		resetVersionState();
 		installError = null;
 	}

@@ -177,12 +177,14 @@
 		if (!action) return;
 		if (action !== "closeMobilePackages" && shouldIgnoreGlobalShortcuts(event.target)) return;
 
-		event.preventDefault();
-
 		if (action === "closeMobilePackages") {
+			if (shouldIgnoreGlobalShortcuts(event.target)) return;
+			event.preventDefault();
 			showMobilePackages = false;
 			return;
 		}
+
+		event.preventDefault();
 
 		if (action === "run") {
 			const status = $containerState.status;
