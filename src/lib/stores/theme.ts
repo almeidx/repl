@@ -6,8 +6,24 @@ export const theme = writable<Theme>("dark");
 let systemThemeQuery: MediaQueryList | null = null;
 let systemThemeListener: ((e: MediaQueryListEvent) => void) | null = null;
 
-export function initTheme() {
-	const stored = localStorage.getItem("theme");
+function storageGetItem(key: string): string | null {
+	try {
+		return localStorage.getItem(key);
+	} catch {
+		return null;
+	}
+}
+
+function storageSetItem(key: string, value: string): void {
+	try {
+		localStorage.setItem(key, value);
+	} catch {
+		// Storage unavailable (private browsing, quota exceeded, etc.)
+	}
+}
+
+export function initTheme(): void {
+	const stored = storageGetItem("theme");
 	if (stored === "dark" || stored === "light") {
 		setTheme(stored);
 	} else {
@@ -21,7 +37,7 @@ export function initTheme() {
 
 	systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 	systemThemeListener = (e) => {
-		if (!localStorage.getItem("theme")) {
+		if (!storageGetItem("theme")) {
 			setTheme(e.matches ? "dark" : "light");
 		}
 	};
@@ -33,9 +49,9 @@ function setTheme(t: Theme) {
 	document.documentElement.classList.toggle("light", t === "light");
 }
 
-export function toggleTheme() {
+export function toggleTheme(): void {
 	const currentTheme = get(theme);
 	const newTheme = currentTheme === "dark" ? "light" : "dark";
-	localStorage.setItem("theme", newTheme);
+	storageSetItem("theme", newTheme);
 	setTheme(newTheme);
 }
