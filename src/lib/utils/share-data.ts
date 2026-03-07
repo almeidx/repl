@@ -5,11 +5,11 @@ export type ShareData = ValidatedShareData;
 
 function encodeBase64(input: string): string {
 	const bytes = new TextEncoder().encode(input);
-	let binary = "";
-	for (const byte of bytes) {
-		binary += String.fromCharCode(byte);
+	const chunks: string[] = [];
+	for (let i = 0; i < bytes.length; i += 8192) {
+		chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
 	}
-	return btoa(binary);
+	return btoa(chunks.join(""));
 }
 
 function decodeBase64(input: string): string {
