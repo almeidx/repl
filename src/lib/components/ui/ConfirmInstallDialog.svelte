@@ -2,17 +2,13 @@
 	import * as dialog from "@zag-js/dialog";
 	import { useMachine } from "@zag-js/svelte";
 	import { zagNormalizeProps } from "$lib/ui/zag/props";
-
-	interface PackageToInstall {
-		name: string;
-		version: string;
-	}
+	import type { ValidatedPackageSpec } from "$lib/utils/validation";
 
 	interface Props {
 		id: string;
 		open: boolean;
 		source: "manual" | "share";
-		packages: PackageToInstall[];
+		packages: ValidatedPackageSpec[];
 		onconfirm: (allowScripts: boolean) => void;
 		oncancel: () => void;
 	}
