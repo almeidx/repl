@@ -37,7 +37,7 @@
 		"@sveltejs/kit": "^2.53.4",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/vite": "^4.2.1",
-		"@types/node": "^25.3.4",
+		"@types/node": "^25.3.5",
 		"@webcontainer/api": "^1.6.1",
 		"oxfmt": "^0.36.0",
 		"oxlint": "^1.51.0",
