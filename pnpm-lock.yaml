@@ -32,9 +32,6 @@ importers:
       '@zag-js/svelte':
         specifier: ^1.35.3
         version: 1.35.3(svelte@5.53.7)
-      '@zag-js/tree-view':
-        specifier: ^1.35.3
-        version: 1.35.3
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
@@ -1127,9 +1124,6 @@ packages:
     resolution: {integrity: sha512-QgP6oPZMJMPONY7iqnYoHya9ZksGppm+x4DkiFe5CsL/D7SDICICnVX0iPA1seYV/WEUelvVAURHEy9/e2asjw==}
     peerDependencies:
       svelte: '>=5'
-
-  '@zag-js/tree-view@1.35.3':
-    resolution: {integrity: sha512-DbHaLxSNa1goE3o3IsXxEdzp8P5dvmkk1rVWgNUUIhpA+44idEjSSNXJkHPl18Mk5blqSMVjK1EX91oqai01Vw==}
 
   '@zag-js/types@1.35.3':
     resolution: {integrity: sha512-Fnm3AMs1lfb55hlkip/eJeWHOjFB3gSi1JkZlkkdltG2l7y/zsHkumPSe6jIKy+DRRIFKRCyXVTatbPN27bO3w==}
@@ -2360,15 +2354,6 @@ snapshots:
       '@zag-js/types': 1.35.3
       '@zag-js/utils': 1.35.3
       svelte: 5.53.7
-
-  '@zag-js/tree-view@1.35.3':
-    dependencies:
-      '@zag-js/anatomy': 1.35.3
-      '@zag-js/collection': 1.35.3
-      '@zag-js/core': 1.35.3
-      '@zag-js/dom-query': 1.35.3
-      '@zag-js/types': 1.35.3
-      '@zag-js/utils': 1.35.3
 
   '@zag-js/types@1.35.3':
     dependencies:
