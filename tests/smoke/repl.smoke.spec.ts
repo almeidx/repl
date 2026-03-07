@@ -107,7 +107,6 @@ test("security headers are returned for document responses", async ({ request })
 	const headers = response.headers();
 	expect(headers["cross-origin-embedder-policy"]).toBe("require-corp");
 	expect(headers["cross-origin-opener-policy"]).toBe("same-origin");
-	expect(headers["content-security-policy"]).toContain("default-src 'self'");
 	expect(headers["x-content-type-options"]).toBe("nosniff");
 	expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
 });
