@@ -14,6 +14,8 @@
 	let pendingWriteChars = 0
 	let clearRequested = false
 	let outputText = $state("")
+	let pendingOutputText = ""
+	let outputFlushQueued = false
 
 	const MAX_OUTPUT_CHARS = 40_000
 	const MAX_PENDING_WRITE_CHARS = 20_000
@@ -64,6 +66,7 @@
 
 	export function clear() {
 		outputText = ""
+		pendingOutputText = ""
 
 		if (terminal) {
 			terminal.clear()
@@ -145,7 +148,14 @@
 
 	function appendOutput(chunk: string) {
 		const plainText = chunk.replace(/\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07/g, "")
-		outputText = `${outputText}${plainText}`.slice(-MAX_OUTPUT_CHARS)
+		pendingOutputText = `${pendingOutputText}${plainText}`.slice(-MAX_OUTPUT_CHARS)
+		if (!outputFlushQueued) {
+			outputFlushQueued = true
+			queueMicrotask(() => {
+				outputText = pendingOutputText
+				outputFlushQueued = false
+			})
+		}
 	}
 
 	function queuePendingWrite(chunk: string) {
