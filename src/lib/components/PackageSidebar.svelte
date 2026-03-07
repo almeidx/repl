@@ -152,7 +152,7 @@
 	}
 </script>
 
-<div class="sidebar min-w-[150px] shrink-0 bg-bg-secondary border-l border-border flex flex-col overflow-hidden" style="width: {width}px">
+<div class="sidebar min-w-[150px] shrink-0 bg-bg-secondary border-l border-border flex flex-col overflow-hidden" style="width: {width}px" data-instanceid={instanceid}>
 	<div class="px-3 py-2 font-medium border-b border-border text-text-secondary text-[11px] uppercase tracking-wider">Packages</div>
 
 	<form class="flex flex-wrap items-start gap-1 p-2 border-b border-border" onsubmit={handleSubmit}>
