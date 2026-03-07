@@ -27,6 +27,7 @@
 	let versionError = $state<string | null>(null);
 	let installError = $state<string | null>(null);
 	let loadedVersionsForPackage = $state<string | null>(null);
+	let versionFetchId = 0;
 
 	const versionItems = $derived.by<VersionItem[]>(() => {
 		const items: VersionItem[] = [{ label: "latest", value: "latest" }];
@@ -114,18 +115,23 @@
 		loadingVersions = true;
 		versionError = null;
 		installError = null;
+		const fetchId = ++versionFetchId;
 
 		try {
 			const result = await fetchPackageVersions(name);
+			if (fetchId !== versionFetchId) return;
 			const latestRemoved = result.versions.filter((version) => version !== result.latest);
 			versions = latestRemoved.slice(0, 50);
 			loadedVersionsForPackage = name;
 		} catch (error) {
+			if (fetchId !== versionFetchId) return;
 			versions = [];
 			loadedVersionsForPackage = null;
 			versionError = error instanceof Error ? error.message : "Failed to fetch versions";
 		} finally {
-			loadingVersions = false;
+			if (fetchId === versionFetchId) {
+				loadingVersions = false;
+			}
 		}
 	}
 
