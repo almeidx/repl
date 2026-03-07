@@ -1,6 +1,7 @@
 import { replaceState } from "$app/navigation";
 import type { Package } from "$lib/stores/packages";
-import { decodeShareData, encodeShareData, parsePackagesFromSearch, type ValidatedShareData } from "./share-data";
+import { decodeShareData, encodeShareData, parsePackagesFromSearch } from "./share-data";
+import type { ValidatedShareData } from "./validation";
 
 export function encodeShareUrl(code: string, packages: Package[]): string {
 	const encoded = encodeShareData(code, packages);
