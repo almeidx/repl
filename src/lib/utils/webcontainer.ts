@@ -138,6 +138,11 @@ function releaseTask(task: "running" | "packages"): void {
 	}
 }
 
+function getContainer(): WebContainer {
+	if (!webcontainer) throw new Error("WebContainer is not available");
+	return webcontainer;
+}
+
 export async function runCode(code: string, onOutput: (data: string) => void): Promise<void> {
 	try {
 		await ensureBooted();
@@ -166,9 +171,9 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
 	containerState.set({ status: "running" });
 
 	try {
-		await webcontainer!.fs.writeFile("index.ts", code);
+		await getContainer().fs.writeFile("index.ts", code);
 
-		const process = await webcontainer!.spawn("./node_modules/.bin/tsx", ["index.ts"]);
+		const process = await getContainer().spawn("./node_modules/.bin/tsx", ["index.ts"]);
 		currentProcess = { runId, process };
 		let timedOut = false;
 
@@ -207,7 +212,9 @@ export async function runCode(code: string, onOutput: (data: string) => void): P
 			currentProcess = null;
 		}
 		releaseTask("running");
-		setReadyState(runId);
+		if (get(containerState).status === "running") {
+			setReadyState(runId);
+		}
 	}
 }
 
@@ -251,14 +258,14 @@ export async function installPackageInContainer(
 		}
 		installArgs.push(pkgSpec);
 
-		const installProcess = await webcontainer!.spawn("npm", installArgs);
+		const installProcess = await getContainer().spawn("npm", installArgs);
 
 		const exitCode = await installProcess.exit;
 		if (exitCode !== 0) {
 			throw new Error(`Failed to install ${pkgSpec}`);
 		}
 
-		const pkgJsonContent = await webcontainer!.fs.readFile("package.json", "utf-8");
+		const pkgJsonContent = await getContainer().fs.readFile("package.json", "utf-8");
 		const pkgJson = JSON.parse(pkgJsonContent);
 		const installedVersion = pkgJson.dependencies?.[name];
 
@@ -285,7 +292,7 @@ export async function uninstallPackageInContainer(name: string): Promise<void> {
 	containerState.set({ status: "installing" });
 
 	try {
-		const uninstallProcess = await webcontainer!.spawn("npm", [
+		const uninstallProcess = await getContainer().spawn("npm", [
 			"uninstall",
 			"--ignore-scripts",
 			"--no-audit",
