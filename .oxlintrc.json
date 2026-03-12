@@ -1,0 +1,20 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"env": {
+		"builtin": true
+	},
+	"ignorePatterns": [
+		".claude/**",
+		".svelte-kit/**",
+		".wrangler/**",
+		"wrangler-local-state/**",
+		"dist/**",
+		"build/**",
+		"coverage/**",
+		"node_modules/**",
+		"playwright-report/**",
+		"test-results/**",
+		"src/app.d.ts",
+		"**/*.svelte"
+	]
+}
