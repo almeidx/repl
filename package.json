@@ -38,15 +38,15 @@
 		"@tailwindcss/vite": "^4.2.1",
 		"@types/node": "^25.4.0",
 		"@webcontainer/api": "^1.6.1",
-		"oxfmt": "^0.37.0",
-		"oxlint": "^1.52.0",
-		"svelte": "^5.53.9",
+		"oxfmt": "^0.38.0",
+		"oxlint": "^1.53.0",
+		"svelte": "^5.53.10",
 		"svelte-check": "^4.4.5",
 		"tailwindcss": "^4.2.1",
 		"typescript": "~5.9.3",
 		"vite": "^7.3.1",
 		"vitest": "^4.0.18",
-		"wrangler": "^4.71.0"
+		"wrangler": "^4.72.0"
 	},
-	"packageManager": "pnpm@10.32.0"
+	"packageManager": "pnpm@10.32.1"
 }
