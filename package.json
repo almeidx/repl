@@ -40,13 +40,13 @@
 		"@webcontainer/api": "^1.6.1",
 		"oxfmt": "^0.41.0",
 		"oxlint": "^1.56.0",
-		"svelte": "^5.53.12",
+		"svelte": "^5.54.0",
 		"svelte-check": "^4.4.5",
 		"tailwindcss": "^4.2.1",
 		"typescript": "~5.9.3",
 		"vite": "^8.0.0",
 		"vitest": "^4.1.0",
-		"wrangler": "^4.74.0"
+		"wrangler": "^4.75.0"
 	},
 	"packageManager": "pnpm@10.32.1"
 }
