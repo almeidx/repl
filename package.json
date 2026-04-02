@@ -32,22 +32,22 @@
 		"monaco-editor": "^0.55.1"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.58.2",
+		"@playwright/test": "^1.59.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",
 		"@sveltejs/kit": "^2.55.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/node": "^25.5.0",
 		"@webcontainer/api": "^1.6.1",
-		"oxfmt": "^0.42.0",
-		"oxlint": "^1.57.0",
+		"oxfmt": "^0.43.0",
+		"oxlint": "^1.58.0",
 		"svelte": "^5.55.1",
 		"svelte-check": "^4.4.6",
 		"tailwindcss": "^4.2.2",
 		"typescript": "~6.0.2",
 		"vite": "^8.0.3",
 		"vitest": "^4.1.2",
-		"wrangler": "^4.78.0"
+		"wrangler": "^4.79.0"
 	},
 	"packageManager": "pnpm@10.33.0"
 }
