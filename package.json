@@ -38,16 +38,16 @@
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/node": "^25.6.0",
-		"@webcontainer/api": "^1.6.1",
+		"@webcontainer/api": "^1.6.4",
 		"oxfmt": "^0.45.0",
 		"oxlint": "^1.60.0",
-		"svelte": "^5.55.3",
+		"svelte": "^5.55.4",
 		"svelte-check": "^4.4.6",
 		"tailwindcss": "^4.2.2",
 		"typescript": "~6.0.2",
 		"vite": "^8.0.8",
 		"vitest": "^4.1.4",
-		"wrangler": "^4.82.2"
+		"wrangler": "^4.83.0"
 	},
 	"packageManager": "pnpm@10.33.0"
 }
