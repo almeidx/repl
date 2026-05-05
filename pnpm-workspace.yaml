@@ -2,8 +2,3 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
-minimumReleaseAgeExclude:
-  # Renovate security update: svelte@5.53.5
-  - svelte@5.53.5
-  # Renovate security update: vite@8.0.5
-  - vite@8.0.5
