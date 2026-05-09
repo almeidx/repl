@@ -35,9 +35,9 @@
 		"@playwright/test": "^1.59.1",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",
 		"@sveltejs/kit": "^2.59.1",
-		"@sveltejs/vite-plugin-svelte": "^7.1.1",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.2.4",
-		"@types/node": "^25.6.0",
+		"@types/node": "^25.6.2",
 		"@webcontainer/api": "^1.6.4",
 		"oxfmt": "^0.48.0",
 		"oxlint": "^1.63.0",
@@ -45,9 +45,9 @@
 		"svelte-check": "^4.4.8",
 		"tailwindcss": "^4.2.4",
 		"typescript": "~6.0.3",
-		"vite": "^8.0.10",
+		"vite": "^8.0.11",
 		"vitest": "^4.1.5",
-		"wrangler": "^4.88.0"
+		"wrangler": "^4.90.0"
 	},
-	"packageManager": "pnpm@11.0.7"
+	"packageManager": "pnpm@11.0.8"
 }
