@@ -37,11 +37,11 @@
 		"@sveltejs/kit": "^2.60.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.0",
-		"@types/node": "^25.8.0",
+		"@types/node": "^25.9.0",
 		"@webcontainer/api": "^1.6.4",
 		"oxfmt": "^0.50.0",
 		"oxlint": "^1.65.0",
-		"svelte": "^5.55.7",
+		"svelte": "^5.55.8",
 		"svelte-check": "^4.4.8",
 		"tailwindcss": "^4.3.0",
 		"typescript": "~6.0.3",
@@ -49,5 +49,5 @@
 		"vitest": "^4.1.6",
 		"wrangler": "^4.92.0"
 	},
-	"packageManager": "pnpm@11.1.2"
+	"packageManager": "pnpm@11.1.3"
 }
