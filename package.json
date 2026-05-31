@@ -41,7 +41,7 @@
 		"@webcontainer/api": "^1.6.4",
 		"oxfmt": "^0.52.0",
 		"oxlint": "^1.67.0",
-		"svelte": "^5.55.10",
+		"svelte": "^5.56.0",
 		"svelte-check": "^4.4.8",
 		"tailwindcss": "^4.3.0",
 		"typescript": "~6.0.3",
