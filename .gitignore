@@ -1,4 +1,5 @@
 .claude/
+.DS_Store
 .svelte-kit/
 .wrangler/
 wrangler-local-state/
