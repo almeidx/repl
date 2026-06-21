@@ -5,7 +5,7 @@
 	"lockFileMaintenance": {
 		"enabled": true,
 		"schedule": ["* 5-9 * * SUN"],
-		"automerge": true
+		"automerge": true,
 	},
 	"minimumReleaseAge": "1 day",
 	"packageRules": [
@@ -15,22 +15,29 @@
 			"matchUpdateTypes": ["patch", "minor"],
 			"schedule": ["* 5-9 * * *", "* * * * SAT,SUN"],
 			"automerge": true,
-			"automergeType": "pr"
+			"automergeType": "pr",
 		},
 		{
 			"enabled": false,
-			"matchDepTypes": ["engines"]
+			"matchDepTypes": ["engines"],
 		},
 		{
 			"enabled": true,
 			"groupName": "Node.js runtime",
 			"groupSlug": "node-js",
 			"matchDatasources": ["docker", "node-version"],
-			"matchPackageNames": ["/(?:^|/)node$/", "!calico/node", "!docker.io/calico/node", "!ghcr.io/devcontainers/features/node", "!kindest/node", "!docker.io/kindest/node"]
-		}
+			"matchPackageNames": [
+				"/(?:^|/)node$/",
+				"!calico/node",
+				"!docker.io/calico/node",
+				"!ghcr.io/devcontainers/features/node",
+				"!kindest/node",
+				"!docker.io/kindest/node",
+			],
+		},
 	],
 	"postUpdateOptions": ["pnpmDedupe"],
 	"prHourlyLimit": 0,
 	"rangeStrategy": "bump",
-	"timezone": "Europe/Lisbon"
+	"timezone": "Europe/Lisbon",
 }
