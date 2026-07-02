@@ -24,11 +24,11 @@
 		"@xterm/addon-fit": "^0.11.0",
 		"@xterm/addon-web-links": "^0.12.0",
 		"@xterm/xterm": "^6.0.0",
-		"@zag-js/collection": "^1.41.2",
-		"@zag-js/combobox": "^1.41.2",
-		"@zag-js/dialog": "^1.41.2",
-		"@zag-js/dom-query": "^1.41.2",
-		"@zag-js/svelte": "^1.41.2",
+		"@zag-js/collection": "^1.42.0",
+		"@zag-js/combobox": "^1.42.0",
+		"@zag-js/dialog": "^1.42.0",
+		"@zag-js/dom-query": "^1.42.0",
+		"@zag-js/svelte": "^1.42.0",
 		"monaco-editor": "^0.55.1"
 	},
 	"devDependencies": {
@@ -36,18 +36,18 @@
 		"@sveltejs/adapter-cloudflare": "^7.2.9",
 		"@sveltejs/kit": "^2.68.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
-		"@tailwindcss/vite": "^4.3.1",
+		"@tailwindcss/vite": "^4.3.2",
 		"@types/node": "^25.9.4",
 		"@webcontainer/api": "^1.6.4",
-		"oxfmt": "^0.56.0",
-		"oxlint": "^1.71.0",
+		"oxfmt": "^0.57.0",
+		"oxlint": "^1.72.0",
 		"svelte": "^5.56.4",
 		"svelte-check": "^4.7.1",
-		"tailwindcss": "^4.3.1",
+		"tailwindcss": "^4.3.2",
 		"typescript": "~6.0.3",
-		"vite": "^8.1.0",
+		"vite": "^8.1.2",
 		"vitest": "^4.1.9",
-		"wrangler": "^4.105.0"
+		"wrangler": "^4.106.0"
 	},
 	"packageManager": "pnpm@11.9.0"
 }
