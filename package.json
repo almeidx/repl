@@ -34,7 +34,7 @@
 	"devDependencies": {
 		"@playwright/test": "^1.61.1",
 		"@sveltejs/adapter-cloudflare": "^7.2.9",
-		"@sveltejs/kit": "^2.69.2",
+		"@sveltejs/kit": "^2.69.3",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@tailwindcss/vite": "^4.3.2",
 		"@types/node": "^25.9.5",
@@ -49,5 +49,5 @@
 		"vitest": "^4.1.10",
 		"wrangler": "^4.110.0"
 	},
-	"packageManager": "pnpm@11.11.0"
+	"packageManager": "pnpm@11.13.0"
 }
