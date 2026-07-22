@@ -1,12 +1,12 @@
-import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
-import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+import type * as MonacoEditor from "monaco-editor/editor";
+import EditorWorker from "monaco-editor/editor/editor.worker?worker";
+import TsWorker from "monaco-editor/languages/features/typescript/ts.worker?worker";
 
 type MonacoModule = typeof MonacoEditor;
 
 export interface MonacoLoadResult {
 	monaco: MonacoModule;
-	typescript: typeof import("monaco-editor/esm/vs/language/typescript/monaco.contribution") | null;
+	typescript: typeof import("monaco-editor/languages/features/typescript/register") | null;
 }
 
 interface MonacoEnvironmentShape {
@@ -39,12 +39,12 @@ export async function loadMonaco(): Promise<MonacoLoadResult> {
 
 	monacoPromise = (async () => {
 		ensureMonacoEnvironment();
-		await import("monaco-editor/esm/vs/editor/editor.all");
-		const monaco = await import("monaco-editor/esm/vs/editor/editor.api");
-		await import("monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution");
+		await import("monaco-editor/features/register.all");
+		const monaco = await import("monaco-editor/editor");
+		await import("monaco-editor/languages/definitions/typescript/register");
 		let typescript: MonacoLoadResult["typescript"] = null;
 		try {
-			typescript = await import("monaco-editor/esm/vs/language/typescript/monaco.contribution");
+			typescript = await import("monaco-editor/languages/features/typescript/register");
 		} catch {
 			// TS language service failed to load; syntax highlighting still works via basic-languages
 		}

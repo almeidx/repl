@@ -11,8 +11,8 @@
 	}
 
 	type MonacoModule = MonacoLoadResult["monaco"];
-	type MonacoEditor = import("monaco-editor/esm/vs/editor/editor.api").editor.IStandaloneCodeEditor;
-	type MonacoDisposable = import("monaco-editor/esm/vs/editor/editor.api").IDisposable;
+	type MonacoEditor = import("monaco-editor/editor").editor.IStandaloneCodeEditor;
+	type MonacoDisposable = import("monaco-editor/editor").IDisposable;
 	type TsContribution = NonNullable<MonacoLoadResult["typescript"]>;
 
 	let { value = $bindable() }: Props = $props();
@@ -53,7 +53,7 @@
 
 		if (tsContribution) {
 			tsContribution.typescriptDefaults.setCompilerOptions({
-				target: tsContribution.ScriptTarget.ES2022,
+				target: tsContribution.ScriptTarget.ESNext,
 				moduleResolution: tsContribution.ModuleResolutionKind.NodeJs,
 				module: tsContribution.ModuleKind.ESNext,
 				strict: true,
