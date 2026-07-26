@@ -17,7 +17,7 @@
 		"test": "pnpm test:unit",
 		"test:ci": "pnpm test:unit",
 		"test:e2e": "pnpm test:smoke",
-		"test:smoke": "playwright test --config=playwright.config.ts",
+		"test:smoke": "svelte-kit sync && playwright test --config=playwright.config.ts",
 		"test:unit": "vitest run tests/unit"
 	},
 	"dependencies": {
