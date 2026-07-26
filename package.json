@@ -17,7 +17,7 @@
 		"test": "pnpm test:unit",
 		"test:ci": "pnpm test:unit",
 		"test:e2e": "pnpm test:smoke",
-		"test:smoke": "playwright test --config=playwright.config.ts",
+		"test:smoke": "svelte-kit sync && playwright test --config=playwright.config.ts",
 		"test:unit": "vitest run tests/unit"
 	},
 	"dependencies": {
@@ -32,7 +32,7 @@
 		"monaco-editor": "^0.56.0"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.61.1",
+		"@playwright/test": "^1.62.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.9",
 		"@sveltejs/kit": "^2.70.1",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
@@ -41,7 +41,7 @@
 		"@webcontainer/api": "^1.6.4",
 		"oxfmt": "^0.60.0",
 		"oxlint": "^1.75.0",
-		"svelte": "^5.56.7",
+		"svelte": "^5.56.8",
 		"svelte-check": "^4.7.3",
 		"tailwindcss": "^4.3.3",
 		"typescript": "~6.0.3",
