@@ -2,7 +2,6 @@
 .DS_Store
 .svelte-kit/
 .wrangler/
-wrangler-local-state/
 dist/
 build/
 node_modules/

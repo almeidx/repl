@@ -70,7 +70,10 @@ pnpm test:smoke
 
 ## Deployment
 
-Deployed to Cloudflare Workers. Requires:
+Deployed as a static-assets-only Cloudflare Worker (no server code). `pnpm build`
+prerenders the site into `build/` with `@sveltejs/adapter-static`; response headers,
+including the COOP/COEP cross-origin isolation WebContainers require, come from
+`static/_headers`. Requires:
 
 1. Cloudflare account
 2. `wrangler` CLI authenticated (`wrangler login`)
@@ -90,7 +93,7 @@ pnpm run deploy
 - **Monaco Editor** - Code editing (CDN)
 - **xterm.js** - Terminal emulation
 - **WebContainers** - Browser-based Node.js runtime
-- **Cloudflare Workers** - Edge deployment
+- **Cloudflare Workers static assets** - Edge deployment
 
 ## License
 

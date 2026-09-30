@@ -1,0 +1,17 @@
+# Applied by Cloudflare Workers static assets; vite.config.ts also reads this
+# file for the dev and preview servers.
+#
+# COOP/COEP are required: without cross-origin isolation WebContainers cannot boot.
+#
+# WARNING: Do NOT add a Content-Security-Policy header here.
+# WebContainers require dynamic connections to StackBlitz service URLs, use
+# internal iframes, eval(), and WASM. A CSP header breaks WebContainer
+# boot/execution. This has been attempted and reverted multiple times.
+# SvelteKit emits the policy configured in vite.config.ts as a <meta> tag.
+/*
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Opener-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  X-Frame-Options: DENY

@@ -7,7 +7,6 @@
 		".claude/**",
 		".svelte-kit/**",
 		".wrangler/**",
-		"wrangler-local-state/**",
 		"dist/**",
 		"build/**",
 		"coverage/**",

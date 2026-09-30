@@ -1,8 +1,9 @@
 # Agent guidance
 
 This project is a browser-based TypeScript/JavaScript REPL. SvelteKit provides
-the UI, WebContainers execute code in the browser, and Cloudflare Workers serves
-the application.
+the UI, WebContainers execute code in the browser, and Cloudflare Workers static
+assets serves the prerendered application. There is no server-side code; keep
+it that way (no `hooks.server.ts`, server routes, or server `load`).
 
 Use `README.md` for setup and user-facing behavior, and `package.json` for the
 current scripts. The constraints below are the parts that should not be inferred
@@ -13,8 +14,9 @@ from a generic Svelte application.
 - WebContainer lifecycle and process control belong in
   `src/lib/utils/webcontainer.ts`. Keep boot lazy and make stop/timeout paths
   clean up the active process.
-- WebContainers require cross-origin isolation. Keep the COOP/COEP behavior in
-  both `src/hooks.server.ts` and the Cloudflare `_headers` file aligned.
+- WebContainers require cross-origin isolation. All response headers, including
+  COOP/COEP, live in `static/_headers`; `vite.config.ts` reads that file for the
+  dev and preview servers, so edit only `static/_headers`.
 - A conventional restrictive CSP can break WebContainer service connections,
   workers, iframes, evaluation, or WASM. Do not change CSP or isolation headers
   without exercising a real browser run, package install, and stop/timeout.
@@ -33,7 +35,7 @@ from a generic Svelte application.
 - `src/lib/utils/webcontainer.ts` — browser runtime lifecycle
 - `src/lib/utils/sharing.ts` — URL serialization
 - `src/lib/utils/npm.ts` — registry access
-- `src/hooks.server.ts` and `_headers` — isolation headers
+- `static/_headers` — isolation and security headers
 
 ## Validation
 
