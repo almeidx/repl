@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { theme } from '$lib/stores/theme'
+	import { theme } from '#lib/stores/theme.js'
 	import { get } from 'svelte/store'
 
 	let container: HTMLDivElement

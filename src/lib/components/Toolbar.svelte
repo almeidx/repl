@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { ContainerState } from "$lib/utils/webcontainer";
-	import type { Theme } from "$lib/stores/theme";
+	import type { ContainerState } from "#lib/utils/webcontainer.js";
+	import type { Theme } from "#lib/stores/theme.js";
 
 	interface Props {
 		state: ContainerState;

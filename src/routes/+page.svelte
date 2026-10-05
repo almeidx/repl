@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import Toolbar from "$lib/components/Toolbar.svelte";
-	import Editor from "$lib/components/Editor.svelte";
-	import Console from "$lib/components/Console.svelte";
-	import PackageSidebar from "$lib/components/PackageSidebar.svelte";
-	import ConfirmInstallDialog from "$lib/components/ui/ConfirmInstallDialog.svelte";
-	import { containerState, runCode, stopExecution } from "$lib/utils/webcontainer";
-	import { packages, installPackage, removePackage } from "$lib/stores/packages";
-	import { theme, initTheme, toggleTheme } from "$lib/stores/theme";
-	import { encodeShareUrl, decodeShareUrl, updateUrlHash, parsePackagesFromUrl } from "$lib/utils/sharing";
-	import { getShortcutAction, shouldIgnoreGlobalShortcuts } from "$lib/utils/shortcuts";
+	import Toolbar from "#lib/components/Toolbar.svelte";
+	import Editor from "#lib/components/Editor.svelte";
+	import Console from "#lib/components/Console.svelte";
+	import PackageSidebar from "#lib/components/PackageSidebar.svelte";
+	import ConfirmInstallDialog from "#lib/components/ui/ConfirmInstallDialog.svelte";
+	import { containerState, runCode, stopExecution } from "#lib/utils/webcontainer.js";
+	import { packages, installPackage, removePackage } from "#lib/stores/packages.js";
+	import { theme, initTheme, toggleTheme } from "#lib/stores/theme.js";
+	import { encodeShareUrl, decodeShareUrl, updateUrlHash, parsePackagesFromUrl } from "#lib/utils/sharing.js";
+	import { getShortcutAction, shouldIgnoreGlobalShortcuts } from "#lib/utils/shortcuts.js";
 	import {
 		clampConsoleHeight,
 		clampSidebarWidth,
 		getResizedConsoleHeight,
 		getResizedSidebarWidth,
-	} from "$lib/utils/layout";
-	import { validatePackageSpec, type ValidatedPackageSpec } from "$lib/utils/validation";
+	} from "#lib/utils/layout.js";
+	import { validatePackageSpec, type ValidatedPackageSpec } from "#lib/utils/validation.js";
 
 	interface InstallDialogResult {
 		allowScripts: boolean;

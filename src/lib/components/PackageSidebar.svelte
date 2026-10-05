@@ -1,9 +1,9 @@
 <script lang="ts">
 	import * as combobox from "@zag-js/combobox";
 	import { useMachine } from "@zag-js/svelte";
-	import type { Package } from "$lib/stores/packages";
-	import { fetchPackageVersions } from "$lib/utils/npm";
-	import { zagNormalizeProps } from "$lib/ui/zag/props";
+	import type { Package } from "#lib/stores/packages.js";
+	import { fetchPackageVersions } from "#lib/utils/npm.js";
+	import { zagNormalizeProps } from "#lib/ui/zag/props.js";
 
 	interface Props {
 		packages: Package[];

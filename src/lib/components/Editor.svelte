@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
-	import { theme } from "$lib/stores/theme";
-	import { packages, type Package } from "$lib/stores/packages";
-	import { fetchPackageTypes } from "$lib/utils/types";
-	import { loadMonaco, type MonacoLoadResult } from "$lib/utils/monaco";
+	import { theme } from "#lib/stores/theme.js";
+	import { packages, type Package } from "#lib/stores/packages.js";
+	import { fetchPackageTypes } from "#lib/utils/types.js";
+	import { loadMonaco, type MonacoLoadResult } from "#lib/utils/monaco.js";
 
 	interface Props {
 		value: string;

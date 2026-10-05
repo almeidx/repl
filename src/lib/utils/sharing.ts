@@ -1,5 +1,5 @@
-import { replaceState } from "$app/navigation";
-import type { Package } from "$lib/stores/packages";
+import { goto } from "$app/navigation";
+import type { Package } from "#lib/stores/packages.js";
 import { decodeShareData, encodeShareData, parsePackagesFromSearch } from "./share-data";
 import type { ValidatedShareData } from "./validation";
 
@@ -17,7 +17,7 @@ export function updateUrlHash(code: string, packages: Package[]): void {
 	}
 	if (window.location.hash.slice(1) === encoded) return;
 	const nextUrl = `${window.location.pathname}${window.location.search}#${encoded}`;
-	replaceState(nextUrl, {});
+	goto(nextUrl, { shallow: true, replace: true });
 }
 
 export function decodeShareUrl(): ValidatedShareData | null {

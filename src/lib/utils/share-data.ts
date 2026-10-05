@@ -1,4 +1,4 @@
-import type { Package } from "$lib/stores/packages";
+import type { Package } from "#lib/stores/packages.js";
 import { MAX_SHARE_CODE_CHARS, sanitizeShareData, validatePackageSpec, type ValidatedShareData } from "./validation";
 
 function encodeBase64(input: string): string {

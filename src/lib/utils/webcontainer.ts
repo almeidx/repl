@@ -1,6 +1,6 @@
 import { writable, get } from "svelte/store";
 import type { WebContainer } from "@webcontainer/api";
-import { normalizePackageName } from "$lib/utils/validation";
+import { normalizePackageName } from "#lib/utils/validation.js";
 
 export interface ContainerState {
 	status: "idle" | "booting" | "ready" | "running" | "installing" | "error";

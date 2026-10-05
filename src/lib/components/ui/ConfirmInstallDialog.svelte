@@ -1,8 +1,8 @@
 <script lang="ts">
 	import * as dialog from "@zag-js/dialog";
 	import { useMachine } from "@zag-js/svelte";
-	import { zagNormalizeProps } from "$lib/ui/zag/props";
-	import type { ValidatedPackageSpec } from "$lib/utils/validation";
+	import { zagNormalizeProps } from "#lib/ui/zag/props.js";
+	import type { ValidatedPackageSpec } from "#lib/utils/validation.js";
 
 	interface Props {
 		id: string;
