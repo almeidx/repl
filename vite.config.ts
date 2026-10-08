@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import adapter from "@sveltejs/adapter-static";
 import { sveltekit } from "@sveltejs/kit/vite";
+import type { Config } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Connect, type Plugin } from "vite";
-import type { Config } from "@sveltejs/kit/vite";
 
 type CspDirectives = NonNullable<NonNullable<Config["csp"]>["directives"]>;
 

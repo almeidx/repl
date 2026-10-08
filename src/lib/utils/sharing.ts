@@ -17,7 +17,7 @@ export function updateUrlHash(code: string, packages: Package[]): void {
 	}
 	if (window.location.hash.slice(1) === encoded) return;
 	const nextUrl = `${window.location.pathname}${window.location.search}#${encoded}`;
-	goto(nextUrl, { shallow: true, replace: true });
+	void goto(nextUrl, { shallow: true, replace: true });
 }
 
 export function decodeShareUrl(): ValidatedShareData | null {

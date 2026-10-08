@@ -1,6 +1,6 @@
 import { writable, get } from "svelte/store";
-import { installPackageInContainer, uninstallPackageInContainer } from "#lib/utils/webcontainer.js";
 import { validatePackageSpec } from "#lib/utils/validation.js";
+import { installPackageInContainer, uninstallPackageInContainer } from "#lib/utils/webcontainer.js";
 
 export interface Package {
 	name: string;

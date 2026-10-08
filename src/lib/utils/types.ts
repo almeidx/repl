@@ -1,6 +1,6 @@
+import { TtlLruCache } from "./cache";
 import { fetchWithTimeout } from "./fetch";
 import { normalizePackageName, normalizePackageVersion } from "./validation";
-import { TtlLruCache } from "./cache";
 
 const JSDELIVR_BASE = "https://cdn.jsdelivr.net/npm";
 

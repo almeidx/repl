@@ -1,5 +1,5 @@
-import { writable, get } from "svelte/store";
 import type { WebContainer } from "@webcontainer/api";
+import { writable, get } from "svelte/store";
 import { normalizePackageName } from "#lib/utils/validation.js";
 
 export interface ContainerState {

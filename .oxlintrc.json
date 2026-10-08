@@ -1,5 +1,12 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"options": {
+		"typeAware": true
+	},
+	"plugins": ["eslint", "typescript", "unicorn", "oxc"],
+	"categories": {
+		"correctness": "error"
+	},
 	"env": {
 		"builtin": true
 	},
@@ -15,5 +22,8 @@
 		"test-results/**",
 		"src/app.d.ts",
 		"**/*.svelte"
-	]
+	],
+	"rules": {
+		"typescript/no-floating-promises": "warn"
+	}
 }

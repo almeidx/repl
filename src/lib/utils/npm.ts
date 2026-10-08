@@ -1,6 +1,6 @@
+import { TtlLruCache } from "./cache";
 import { fetchWithTimeout } from "./fetch";
 import { normalizePackageName } from "./validation";
-import { TtlLruCache } from "./cache";
 
 export interface NpmPackageVersions {
 	versions: string[];
