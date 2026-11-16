@@ -18,7 +18,8 @@ describe("shared links", () => {
 	});
 
 	it("refuses to share oversized code", () => {
-		expect(() => encodeShare("x".repeat(MAX_SHARED_CODE + 1), [])).toThrow(RangeError);
+		expect(encodeShare("x".repeat(MAX_SHARED_CODE), [])).not.toBeNull();
+		expect(encodeShare("x".repeat(MAX_SHARED_CODE + 1), [])).toBeNull();
 	});
 
 	it("drops malformed payloads and invalid packages", () => {

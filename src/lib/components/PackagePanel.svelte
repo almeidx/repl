@@ -25,7 +25,6 @@
 	});
 	const installing = $derived(runtime.packages.filter((entry) => entry.status === 'installing').length);
 
-	// Versions for the typed name, once typing pauses.
 	$effect(() => {
 		const target = trimmed;
 		versions = [];

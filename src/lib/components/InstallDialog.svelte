@@ -1,14 +1,24 @@
+<script lang="ts" module>
+	/** Who asked: the user, or a shared link being opened. */
+	export type InstallSource = 'manual' | 'share';
+</script>
+
 <script lang="ts">
 	import type { PackageSpec } from '#lib/npm.js';
+	import type { InstallOptions } from '#lib/runtime.svelte.js';
 
-	type Decision = { allowScripts: boolean } | null;
+	type Decision = InstallOptions | null;
 
 	let dialog: HTMLDialogElement;
-	let request = $state.raw<{ source: 'manual' | 'share'; packages: PackageSpec[]; resolve: (decision: Decision) => void } | null>(null);
+	let request = $state.raw<{ source: InstallSource; packages: PackageSpec[]; resolve: (decision: Decision) => void } | null>(null);
 	let allowScripts = $state(false);
 
+	export function isOpen(): boolean {
+		return request !== null;
+	}
+
 	/** Asks before anything is installed; resolves `null` when dismissed. A new request dismisses the previous one. */
-	export function confirm(source: 'manual' | 'share', packages: PackageSpec[]): Promise<Decision> {
+	export function confirm(source: InstallSource, packages: PackageSpec[]): Promise<Decision> {
 		settle(null);
 		const { promise, resolve } = Promise.withResolvers<Decision>();
 		request = { source, packages, resolve };

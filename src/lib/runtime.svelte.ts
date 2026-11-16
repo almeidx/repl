@@ -1,11 +1,21 @@
 import type { WebContainer, WebContainerProcess } from "@webcontainer/api";
 import type { PackageSpec } from "./npm.js";
 
-export type RuntimeStatus = "idle" | "booting" | "ready" | "running" | "installing" | "error";
+type RuntimeStatus = "idle" | "booting" | "ready" | "running" | "installing" | "error";
 
-export interface InstalledPackage extends PackageSpec {
+interface InstalledPackage extends PackageSpec {
 	status: "installing" | "installed" | "error";
 	error?: string;
+}
+
+export interface InstallOptions {
+	allowScripts: boolean;
+}
+
+/** Where a run's output goes; cleared when the run starts. */
+export interface RunOutput {
+	write(data: string): void;
+	clear(): void;
 }
 
 const RUN_TIMEOUT_MS = 30_000;
@@ -31,8 +41,8 @@ const FILES = {
 	},
 };
 
-export const red = (text: string) => `\n\x1b[31m${text}\x1b[0m\n`;
-export const yellow = (text: string) => `\n\x1b[33m${text}\x1b[0m\n`;
+const red = (text: string) => `\n\x1b[31m${text}\x1b[0m\n`;
+const yellow = (text: string) => `\n\x1b[33m${text}\x1b[0m\n`;
 
 function message(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -56,12 +66,17 @@ class Runtime {
 		return this.status === "booting" || this.status === "running" || this.status === "installing";
 	}
 
-	/** Runs `code` with tsx, streaming output; stops after 30 seconds. */
-	run(code: string, write: (data: string) => void): Promise<void> {
-		if (this.busy) {
-			write(yellow(this.status === "installing" ? "Wait for the package install to finish." : "Already running."));
-			return Promise.resolve();
-		}
+	get installed(): PackageSpec[] {
+		return this.packages
+			.filter((entry) => entry.status === "installed")
+			.map(({ name, version }) => ({ name, version }));
+	}
+
+	/** Runs `code` with tsx into a freshly cleared `output`; does nothing while busy. */
+	run(code: string, output: RunOutput): Promise<void> {
+		if (this.busy) return Promise.resolve();
+		output.clear();
+		const write = (data: string) => output.write(data);
 		return this.#exclusive(async () => {
 			let container: WebContainer;
 			try {
@@ -86,9 +101,9 @@ class Runtime {
 				}
 				this.#process = process;
 				// The stream errors when the process is killed; the exit code below still settles.
-				const output = process.output.pipeTo(new WritableStream({ write })).catch(() => {});
+				const piped = process.output.pipeTo(new WritableStream({ write })).catch(() => {});
 				const exitCode = await process.exit;
-				await output;
+				await piped;
 				if (exitCode !== 0 && id === this.#run) write(red(`Process exited with code ${exitCode}`));
 			} catch (error) {
 				if (id === this.#run) write(red(`Error: ${message(error)}`));
@@ -102,7 +117,6 @@ class Runtime {
 		});
 	}
 
-	/** Kills the running process, if any. */
 	stop(): void {
 		if (this.status !== "running") return;
 		this.#run++;
@@ -111,10 +125,15 @@ class Runtime {
 		this.status = "ready";
 	}
 
-	install(spec: PackageSpec, { allowScripts }: { allowScripts: boolean }): Promise<void> {
+	install(spec: PackageSpec, { allowScripts }: InstallOptions): Promise<void> {
 		this.#setPackage({ ...spec, status: "installing" });
-		const target = spec.version === "latest" ? spec.name : `${spec.name}@${spec.version}`;
-		const args = ["install", "--save-exact", ...NPM_FLAGS, ...(allowScripts ? [] : ["--ignore-scripts"]), target];
+		const args = [
+			"install",
+			"--save-exact",
+			...NPM_FLAGS,
+			...(allowScripts ? [] : ["--ignore-scripts"]),
+			`${spec.name}@${spec.version}`,
+		];
 		return this.#npm(spec.name, args, async (container) => {
 			const manifest = JSON.parse(await container.fs.readFile("package.json", "utf-8")) as {
 				dependencies?: Record<string, string>;

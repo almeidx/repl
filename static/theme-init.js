@@ -1,21 +1,11 @@
+// Applies the theme saved by `src/lib/settings.svelte.ts` (same `theme` key) before first paint.
 (function () {
-	let savedTheme = null;
-
+	let saved = null;
 	try {
-		savedTheme = localStorage.getItem("theme");
+		saved = localStorage.getItem("theme");
 	} catch {
-		savedTheme = null;
+		// Storage can be disabled; fall back to the system preference.
 	}
-
-	if (savedTheme === "light" || savedTheme === "dark") {
-		document.documentElement.dataset.theme = savedTheme;
-		return;
-	}
-
-	if (window.matchMedia("(prefers-color-scheme: light)").matches) {
-		document.documentElement.dataset.theme = "light";
-		return;
-	}
-
-	document.documentElement.dataset.theme = "dark";
+	const system = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+	document.documentElement.dataset.theme = saved === "light" || saved === "dark" ? saved : system;
 })();

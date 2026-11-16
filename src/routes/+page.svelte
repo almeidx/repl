@@ -1,21 +1,43 @@
 <script lang="ts">
+	import { browser } from '$app/env';
 	import { goto } from '$app/navigation';
 	import Console from '#lib/components/Console.svelte';
 	import Editor from '#lib/components/Editor.svelte';
-	import InstallDialog from '#lib/components/InstallDialog.svelte';
+	import InstallDialog, { type InstallSource } from '#lib/components/InstallDialog.svelte';
 	import PackagePanel from '#lib/components/PackagePanel.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import Splitter from '#lib/components/Splitter.svelte';
 	import type { PackageSpec } from '#lib/npm.js';
-	import { red, runtime } from '#lib/runtime.svelte.js';
+	import { runtime } from '#lib/runtime.svelte.js';
 	import { decodeShare, encodeShare } from '#lib/share.js';
 	import { onMount } from 'svelte';
+	import { innerHeight } from 'svelte/reactivity/window';
 
 	const HASH_DEBOUNCE_MS = 500;
-	const RESIZE_STEP = 16;
 
-	let code = $state("console.log('Hello, world!')");
-	/** The hash is only rewritten once the shared link has been read. */
-	let restored = $state(false);
+	interface Command {
+		label: string;
+		key: string;
+		/** Shift is required; other shortcuts ignore it (some layouts need Shift to type `.`). */
+		shift?: boolean;
+		action: () => unknown;
+	}
+
+	const commands = {
+		run: { label: 'Run', key: 'Enter', action: run },
+		stop: { label: 'Stop', key: '.', action: () => runtime.stop() },
+		clear: { label: 'Clear console', key: 'K', action: () => terminal?.clear() },
+		share: { label: 'Copy link', key: 'U', shift: true, action: share },
+	} satisfies Record<string, Command>;
+
+	const hint = ({ label, key, shift }: Command) => `${label} (Ctrl/⌘ + ${shift ? 'Shift + ' : ''}${key})`;
+
+	const shared = browser ? decodeShare(location) : { code: null, packages: [] };
+	let code = $state(shared.code ?? "console.log('Hello, world!')");
+	/** Shared packages awaiting the install prompt; the link keeps them until the user decides. */
+	let undecided = $state(shared.packages);
+	/** What a link to this page carries: packages installed or still installing, plus undecided shared ones. */
+	const linkPackages = $derived([...runtime.packages.filter((entry) => entry.status !== 'error'), ...undecided]);
 	let terminal = $state<Console>();
 	let dialog = $state<InstallDialog>();
 	let notice = $state('');
@@ -24,11 +46,6 @@
 	let consoleHeight = $state(220);
 	let sidebarWidth = $state(280);
 
-	const installed = $derived(
-		runtime.packages.filter((entry) => entry.status === 'installed').map(({ name, version }) => ({ name, version })),
-	);
-	const canRun = $derived(!runtime.busy);
-
 	function notify(text: string) {
 		notice = text;
 		clearTimeout(noticeTimer);
@@ -36,21 +53,21 @@
 	}
 
 	function run() {
-		if (!canRun) return;
-		terminal?.clear();
-		void runtime.run(code, (data) => terminal?.write(data));
+		if (terminal) void runtime.run(code, terminal);
 	}
 
 	async function share() {
+		const hash = encodeShare(code, linkPackages);
+		if (hash === null) return notify('Code is too large to share');
 		try {
-			await navigator.clipboard.writeText(`${location.origin}${location.pathname}#${encodeShare(code, installed)}`);
+			await navigator.clipboard.writeText(`${location.origin}${location.pathname}#${hash}`);
 			notify('Link copied');
-		} catch (error) {
-			notify(error instanceof RangeError ? error.message : 'Could not copy the link');
+		} catch {
+			notify('Could not copy the link');
 		}
 	}
 
-	async function install(source: 'manual' | 'share', specs: PackageSpec[]): Promise<boolean> {
+	async function install(source: InstallSource, specs: PackageSpec[]): Promise<boolean> {
 		const decision = await dialog!.confirm(source, specs);
 		if (!decision) return false;
 		for (const spec of specs) void runtime.install(spec, decision);
@@ -58,23 +75,18 @@
 	}
 
 	onMount(() => {
-		const shared = decodeShare(location);
-		if (shared.code !== null) code = shared.code;
-		restored = true;
 		if (shared.packages.length > 0) {
-			void install('share', shared.packages).then((confirmed) => confirmed || notify('Shared packages skipped'));
+			void install('share', shared.packages).then((confirmed) => {
+				undecided = [];
+				if (!confirmed) notify('Shared packages skipped');
+			});
 		}
 		return () => clearTimeout(noticeTimer);
 	});
 
 	$effect(() => {
-		if (!restored) return;
-		let hash: string;
-		try {
-			hash = encodeShare(code, installed);
-		} catch {
-			return; // Too large to share: keep the last shareable hash.
-		}
+		const hash = encodeShare(code, linkPackages);
+		if (hash === null) return;
 		const timer = setTimeout(() => {
 			if (location.hash.slice(1) !== hash) void goto(`#${hash}`, { shallow: true, replace: true });
 		}, HASH_DEBOUNCE_MS);
@@ -82,28 +94,16 @@
 	});
 
 	function onkeydown(event: KeyboardEvent) {
-		if (!(event.metaKey || event.ctrlKey) || document.querySelector('dialog[open]')) return;
+		if (!(event.metaKey || event.ctrlKey) || dialog?.isOpen()) return;
 		const key = event.key.toLowerCase();
-		const action =
-			key === 'enter' ? run : key === '.' ? () => runtime.stop() : key === 'k' ? () => terminal?.clear() : event.shiftKey && key === 'u' ? share : null;
-		if (!action) return;
+		const command = Object.values(commands).find(
+			(entry: Command) => entry.key.toLowerCase() === key && (!entry.shift || event.shiftKey),
+		);
+		if (!command) return;
 		// Capture phase: these win over the editor's own bindings for the same keys.
 		event.preventDefault();
 		event.stopPropagation();
-		void action();
-	}
-
-	const clampConsole = (height: number) => Math.round(Math.max(80, Math.min(height, innerHeight - 160)));
-	const clampSidebar = (width: number) => Math.round(Math.max(200, Math.min(width, 480)));
-
-	/** Pointer drag on a splitter; capture keeps events flowing over the editor while dragging. */
-	function drag(event: PointerEvent, apply: (event: PointerEvent) => void) {
-		if (event.button !== 0) return;
-		event.preventDefault();
-		const handle = event.currentTarget as HTMLElement;
-		handle.setPointerCapture(event.pointerId);
-		handle.addEventListener('pointermove', apply);
-		handle.addEventListener('lostpointercapture', () => handle.removeEventListener('pointermove', apply), { once: true });
+		void command.action();
 	}
 </script>
 
@@ -126,8 +126,8 @@
 			<button
 				type="button"
 				class="flex h-8 items-center gap-2 rounded-lg bg-danger px-3 text-sm font-semibold text-white hover:opacity-90"
-				title="Stop (Ctrl/⌘ + .)"
-				onclick={() => runtime.stop()}
+				title={hint(commands.stop)}
+				onclick={commands.stop.action}
 			>
 				<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><rect width="10" height="10" rx="1.5" /></svg>
 				Stop
@@ -136,8 +136,8 @@
 			<button
 				type="button"
 				class="flex h-8 items-center gap-2 rounded-lg bg-accent px-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-				title="Run (Ctrl/⌘ + Enter)"
-				disabled={!canRun}
+				title={hint(commands.run)}
+				disabled={runtime.busy}
 				onclick={run}
 			>
 				{#if runtime.busy}
@@ -163,7 +163,7 @@
 			<button
 				type="button"
 				class="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted transition-colors hover:bg-raised hover:text-fg"
-				title="Copy link (Ctrl/⌘ + Shift + U)"
+				title={hint(commands.share)}
 				onclick={share}
 			>
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -188,44 +188,14 @@
 
 	<div class="flex min-h-0 flex-1">
 		<main class="flex min-w-0 flex-1 flex-col">
-			<Editor bind:value={code} />
-			<!-- A focusable separator is the ARIA window-splitter pattern; Svelte's a11y rules treat it as static. -->
-			<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-			<div
-				role="separator"
-				tabindex="0"
-				aria-label="Resize console"
-				aria-orientation="horizontal"
-				aria-valuenow={consoleHeight}
-				aria-valuemin={80}
-				class="h-1 shrink-0 cursor-row-resize border-t border-border transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
-				onpointerdown={(event) => drag(event, (move) => (consoleHeight = clampConsole(innerHeight - move.clientY)))}
-				onkeydown={(event) => {
-					const delta = event.key === 'ArrowUp' ? RESIZE_STEP : event.key === 'ArrowDown' ? -RESIZE_STEP : 0;
-					if (delta) consoleHeight = clampConsole(consoleHeight + delta);
-				}}
-			></div>
+			<Editor bind:value={code} packages={runtime.installed} />
+			<Splitter label="Resize console" orientation="horizontal" bind:value={consoleHeight} min={80} max={(innerHeight.current ?? 0) - 160} />
 			<section class="shrink-0" style:height="{consoleHeight}px" aria-label="Console">
 				<Console bind:this={terminal} />
 			</section>
 		</main>
 
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-		<div
-			role="separator"
-			tabindex="0"
-			aria-label="Resize packages"
-			aria-orientation="vertical"
-			aria-valuenow={sidebarWidth}
-			aria-valuemin={200}
-			aria-valuemax={480}
-			class="w-1 shrink-0 cursor-col-resize border-l border-border transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none max-md:hidden"
-			onpointerdown={(event) => drag(event, (move) => (sidebarWidth = clampSidebar(innerWidth - move.clientX)))}
-			onkeydown={(event) => {
-				const delta = event.key === 'ArrowLeft' ? RESIZE_STEP : event.key === 'ArrowRight' ? -RESIZE_STEP : 0;
-				if (delta) sidebarWidth = clampSidebar(sidebarWidth + delta);
-			}}
-		></div>
+		<Splitter label="Resize packages" orientation="vertical" bind:value={sidebarWidth} min={200} max={480} class="max-md:hidden" />
 
 		{#if packagesOpen}
 			<button type="button" class="fixed inset-0 z-40 bg-black/50 md:hidden" aria-label="Close packages" onclick={() => (packagesOpen = false)}></button>

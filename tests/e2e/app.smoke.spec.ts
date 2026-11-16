@@ -77,14 +77,21 @@ test("installs a package after confirmation and makes it importable", async ({ p
 });
 
 test("shared links restore code and ask before installing their packages", async ({ page }) => {
+	await page.clock.install();
 	await page.goto(`/#${hashOf({ code: "console.log('shared')", packages: [{ name: "lodash", version: "4.17.21" }] })}`);
+	const linkPackages = () => JSON.parse(atob(new URL(page.url()).hash.slice(1))).packages;
 
 	const dialog = page.getByRole("dialog", { name: "Install package?" });
 	await expect(dialog).toBeVisible();
 	await expect(dialog).toContainText("This shared link installs");
 	await expect(dialog).toContainText("4.17.21");
+	// Past the hash debounce: the link still carries the packages awaiting a decision.
+	await page.clock.runFor(2_000);
+	expect(linkPackages()).toEqual([{ name: "lodash", version: "4.17.21" }]);
 	await dialog.getByRole("button", { name: "Cancel" }).click();
 	await expect(dialog).toBeHidden();
+	await page.clock.runFor(2_000);
+	await expect.poll(linkPackages).toBeUndefined();
 
 	await expect(page.locator(".monaco-editor .view-lines")).toContainText("console.log('shared')");
 	await expect(page.getByRole("list", { name: "Installed packages" })).toContainText("Nothing installed");

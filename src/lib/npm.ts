@@ -1,5 +1,7 @@
-const REGISTRY = "https://registry.npmjs.org";
-const CDN = "https://cdn.jsdelivr.net/npm";
+/** Origins this module fetches from; the CSP `connect-src` in vite.config.ts allows them. */
+export const REGISTRY = "https://registry.npmjs.org";
+export const CDN_ORIGIN = "https://cdn.jsdelivr.net";
+const CDN = `${CDN_ORIGIN}/npm`;
 const TIMEOUT_MS = 10_000;
 
 const NAME_RE = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/i;
@@ -28,40 +30,41 @@ function get(url: string, init?: RequestInit): Promise<Response> {
 }
 
 /** Memoizes a request for the page's lifetime; failures are forgotten so they can be retried. */
-function memoize<T>(load: (key: string) => Promise<T>): (key: string) => Promise<T> {
+function memoize<A, T>(key: (arg: A) => string, load: (arg: A) => Promise<T>): (arg: A) => Promise<T> {
 	const cache = new Map<string, Promise<T>>();
-	return (key) => {
-		let promise = cache.get(key);
+	return (arg) => {
+		const id = key(arg);
+		let promise = cache.get(id);
 		if (!promise) {
-			promise = load(key);
-			cache.set(key, promise);
-			promise.catch(() => cache.delete(key));
+			promise = load(arg);
+			cache.set(id, promise);
+			promise.catch(() => cache.delete(id));
 		}
 		return promise;
 	};
 }
 
 /** Published versions, newest first. */
-export const getVersions = memoize(async (name: string): Promise<string[]> => {
-	const response = await get(`${REGISTRY}/${encodeURIComponent(name)}`, {
-		headers: { Accept: "application/vnd.npm.install-v1+json" },
-	});
-	if (!response.ok) throw new Error(response.status === 404 ? `"${name}" is not on npm` : "Could not load versions");
-	const data = (await response.json()) as { versions?: Record<string, unknown> };
-	return Object.keys(data.versions ?? {}).reverse();
-});
+export const getVersions = memoize(
+	(name: string) => name,
+	async (name) => {
+		const response = await get(`${REGISTRY}/${encodeURIComponent(name)}`, {
+			headers: { Accept: "application/vnd.npm.install-v1+json" },
+		});
+		if (!response.ok) throw new Error(response.status === 404 ? `"${name}" is not on npm` : "Could not load versions");
+		const data = (await response.json()) as { versions?: Record<string, unknown> };
+		return Object.keys(data.versions ?? {}).reverse();
+	},
+);
 
-/** Keyed by `name@version`; the version never contains `@`. */
-const fetchTypes = memoize(async (key: string): Promise<string | null> => {
-	const at = key.lastIndexOf("@");
-	const name = key.slice(0, at);
-	const version = key.slice(at + 1);
-	return (await bundledTypes(name, version)) ?? (await definitelyTyped(name));
-});
+const fetchTypes = memoize(
+	({ name, version }: PackageSpec) => `${name}@${version}`,
+	async ({ name, version }) => (await bundledTypes(name, version)) ?? (await definitelyTyped(name)),
+);
 
 /** The package's own declarations, else its DefinitelyTyped entry point; `null` when neither exists. */
-export function getTypes({ name, version }: PackageSpec): Promise<string | null> {
-	return fetchTypes(`${name}@${version}`).catch(() => null);
+export function getTypes(spec: PackageSpec): Promise<string | null> {
+	return fetchTypes(spec).catch(() => null);
 }
 
 async function text(url: string): Promise<string | null> {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Terminal } from '@xterm/xterm';
-	import { settings, surfaces, type Theme } from '#lib/settings.svelte.js';
+	import { settings, type Surface } from '#lib/settings.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
 	let root: HTMLDivElement;
@@ -8,8 +8,7 @@
 	/** Output written before xterm finishes loading. */
 	let pending: string[] = [];
 
-	function terminalTheme(theme: Theme) {
-		const { background, foreground, selection } = surfaces[theme];
+	function terminalTheme({ background, foreground, selection }: Surface) {
 		return { background, foreground, cursor: background, selectionBackground: selection };
 	}
 
@@ -36,7 +35,7 @@
 		]).then(([{ Terminal }, { FitAddon }, { WebLinksAddon }]) => {
 			if (disposed) return;
 			const created = new Terminal({
-				theme: terminalTheme(untrack(() => settings.theme)),
+				theme: terminalTheme(untrack(() => settings.surface)),
 				fontSize: 13,
 				fontFamily: getComputedStyle(root).fontFamily,
 				cursorStyle: 'bar',
@@ -69,7 +68,7 @@
 	});
 
 	$effect(() => {
-		if (terminal) terminal.options.theme = terminalTheme(settings.theme);
+		if (terminal) terminal.options.theme = terminalTheme(settings.surface);
 	});
 </script>
 

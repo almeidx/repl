@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Same palette as diff.almeidx.dev. Monaco and xterm backgrounds mirror `--bg` via `surfaces` in settings.svelte.ts. */
+/* Same palette as diff.almeidx.dev. Monaco and xterm read `--bg`, `--fg` and `--selection` via `settings.surface`. */
 @theme {
 	--color-bg: var(--bg);
 	--color-surface: var(--surface);
@@ -29,6 +29,7 @@
 	--accent: #009fff;
 	--success: #18a46c;
 	--danger: #d52c36;
+	--selection: #009fff40;
 }
 
 :root[data-theme="dark"] {
@@ -43,6 +44,7 @@
 	--accent: #009fff;
 	--success: #07c480;
 	--danger: #ff2e3f;
+	--selection: #009fff55;
 }
 
 @layer base {

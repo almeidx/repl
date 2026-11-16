@@ -38,11 +38,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Sync SvelteKit
-        run: pnpm exec svelte-kit sync
-
       - name: Test suite
-        run: pnpm test:ci
+        run: pnpm test
 
       - name: Type check
         run: pnpm check
@@ -79,7 +76,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Playwright tests
-        run: pnpm test:e2e
+        run: pnpm test:smoke
 
       - name: Upload Playwright artifacts
         if: failure()

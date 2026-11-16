@@ -1,30 +1,29 @@
 <script lang="ts">
 	import type { editor, IDisposable } from 'monaco-editor/editor';
-	import { loadMonaco, monacoTheme, type LoadedMonaco } from '#lib/monaco.js';
-	import { getTypes } from '#lib/npm.js';
-	import { runtime } from '#lib/runtime.svelte.js';
+	import { applyTheme, loadMonaco, type LoadedMonaco } from '#lib/monaco.js';
+	import { getTypes, type PackageSpec } from '#lib/npm.js';
 	import { settings } from '#lib/settings.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
-	let { value = $bindable() }: { value: string } = $props();
+	/** `value` is read once on mount, then kept in sync with the editor's contents. */
+	let { value = $bindable(), packages }: { value: string; packages: readonly PackageSpec[] } = $props();
 
 	let root: HTMLDivElement;
 	let loaded = $state.raw<LoadedMonaco | null>(null);
-	let instance = $state.raw<editor.IStandaloneCodeEditor | null>(null);
 	let error = $state<string | null>(null);
 	/** Declarations of installed packages, keyed by `name@version`; a no-op placeholder while loading. */
 	const libs = new Map<string, IDisposable>();
 
 	onMount(() => {
 		let disposed = false;
+		let instance: editor.IStandaloneCodeEditor | undefined;
 		loadMonaco().then(
 			(result) => {
 				if (disposed) return;
 				loaded = result;
 				const created = result.monaco.editor.create(root, {
 					value: untrack(() => value),
-					language: result.typescript ? 'typescript' : 'javascript',
-					theme: monacoTheme(untrack(() => settings.theme)),
+					language: 'typescript',
 					fontSize: 14,
 					tabSize: 2,
 					wordWrap: 'on',
@@ -45,37 +44,29 @@
 			for (const lib of libs.values()) lib.dispose();
 			libs.clear();
 			instance?.dispose();
-			instance = null;
 		};
 	});
 
-	// Shared links and other outside changes.
 	$effect(() => {
-		if (instance && instance.getValue() !== value) instance.setValue(value);
+		if (loaded) applyTheme(loaded, settings.theme, settings.surface);
 	});
 
 	$effect(() => {
-		loaded?.monaco.editor.setTheme(monacoTheme(settings.theme));
-	});
-
-	$effect(() => {
-		const typescript = loaded?.typescript;
-		if (!typescript) return;
-		const installed = new Map(
-			runtime.packages.filter((entry) => entry.status === 'installed').map((entry) => [`${entry.name}@${entry.version}`, entry]),
-		);
+		if (!loaded) return;
+		const { typescriptDefaults } = loaded.typescript;
+		const wanted = new Map(packages.map((spec) => [`${spec.name}@${spec.version}`, spec]));
 		for (const [key, lib] of libs) {
-			if (installed.has(key)) continue;
+			if (wanted.has(key)) continue;
 			lib.dispose();
 			libs.delete(key);
 		}
-		for (const [key, spec] of installed) {
+		for (const [key, spec] of wanted) {
 			if (libs.has(key)) continue;
 			const placeholder = { dispose() {} };
 			libs.set(key, placeholder);
 			void getTypes(spec).then((types) => {
 				if (libs.get(key) !== placeholder || !types) return;
-				libs.set(key, typescript.typescriptDefaults.addExtraLib(types, `file:///node_modules/${spec.name}/index.d.ts`));
+				libs.set(key, typescriptDefaults.addExtraLib(types, `file:///node_modules/${spec.name}/index.d.ts`));
 			});
 		}
 	});

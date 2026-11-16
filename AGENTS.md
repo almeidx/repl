@@ -42,11 +42,14 @@ miss while changing the code.
 - `src/lib/runtime.svelte.ts` — the reactive `runtime`: status, installed
   packages, run/stop/install/uninstall
 - `src/lib/share.ts` — shared-link encoding
-- `src/lib/npm.ts` — spec validation, versions and type declarations
-- `src/lib/settings.svelte.ts` — theme, plus the editor/terminal colors that
-  mirror `src/app.css`
+- `src/lib/npm.ts` — spec validation, versions and type declarations; its
+  fetch origins feed the CSP `connect-src`
+- `src/lib/settings.svelte.ts` — theme, plus `surface`: the editor/terminal
+  colors read from the palette in `src/app.css` (the only place colors live)
 - `src/lib/components/` — `Editor` (Monaco), `Console` (xterm),
-  `PackagePanel`, `InstallDialog`, and the header shared with diff
+  `PackagePanel`, `InstallDialog`, `Splitter`. `SiteHeader`, `ThemeToggle`
+  and `Combobox` are copies shared with the diff repo; keep them generic and
+  in sync rather than specializing them here.
 - `static/_headers` — isolation and security headers
 
 ## Validation

@@ -5,18 +5,19 @@ import type { Config } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Connect, type Plugin } from "vite";
+import { CDN_ORIGIN, REGISTRY } from "./src/lib/npm.js";
 
 type CspDirectives = NonNullable<NonNullable<Config["csp"]>["directives"]>;
 
 const CONNECT_SRC = [
 	"self",
-	"https://registry.npmjs.org",
+	REGISTRY,
+	CDN_ORIGIN,
 	"https://stackblitz.com",
 	"https://*.w-corp-staticblitz.com",
 	"https://c.staticblitz.com",
 	"https://t.staticblitz.com",
 	"https://nr.staticblitz.com",
-	"https://cdn.jsdelivr.net",
 ] satisfies NonNullable<CspDirectives["connect-src"]>;
 
 const DEV_CONNECT_SRC = [

@@ -17,8 +17,6 @@
 		"lint": "svelte-kit sync && oxlint && oxfmt --check",
 		"preview": "wrangler dev",
 		"test": "vitest run",
-		"test:ci": "pnpm test",
-		"test:e2e": "pnpm test:smoke",
 		"test:smoke": "svelte-kit sync && playwright test",
 		"test:watch": "vitest"
 	},

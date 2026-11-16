@@ -14,9 +14,9 @@ export interface Shared {
 	packages: PackageSpec[];
 }
 
-/** Throws a `RangeError` when the code is too large to share. */
-export function encodeShare(code: string, packages: readonly PackageSpec[]): string {
-	if (code.length > MAX_SHARED_CODE) throw new RangeError("Code is too large to share");
+/** The hash for a shared link, without `#`; `null` when the code is too large to share. */
+export function encodeShare(code: string, packages: readonly PackageSpec[]): string | null {
+	if (code.length > MAX_SHARED_CODE) return null;
 	const payload: { code: string; packages?: PackageSpec[] } = { code };
 	if (packages.length > 0) payload.packages = packages.map(({ name, version }) => ({ name, version }));
 
