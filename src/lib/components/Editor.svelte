@@ -1,187 +1,87 @@
 <script lang="ts">
-	import { onDestroy, onMount } from "svelte";
-	import { get } from "svelte/store";
-	import { theme } from "#lib/stores/theme.js";
-	import { packages, type Package } from "#lib/stores/packages.js";
-	import { fetchPackageTypes } from "#lib/utils/types.js";
-	import { loadMonaco, type MonacoLoadResult } from "#lib/utils/monaco.js";
+	import type { editor, IDisposable } from 'monaco-editor/editor';
+	import { loadMonaco, monacoTheme, type LoadedMonaco } from '#lib/monaco.js';
+	import { getTypes } from '#lib/npm.js';
+	import { runtime } from '#lib/runtime.svelte.js';
+	import { settings } from '#lib/settings.svelte.js';
+	import { onMount, untrack } from 'svelte';
 
-	interface Props {
-		value: string;
-	}
+	let { value = $bindable() }: { value: string } = $props();
 
-	type MonacoModule = MonacoLoadResult["monaco"];
-	type MonacoEditor = import("monaco-editor/editor").editor.IStandaloneCodeEditor;
-	type MonacoDisposable = import("monaco-editor/editor").IDisposable;
-	type TsContribution = NonNullable<MonacoLoadResult["typescript"]>;
+	let root: HTMLDivElement;
+	let loaded = $state.raw<LoadedMonaco | null>(null);
+	let instance = $state.raw<editor.IStandaloneCodeEditor | null>(null);
+	let error = $state<string | null>(null);
+	/** Declarations of installed packages, keyed by `name@version`; a no-op placeholder while loading. */
+	const libs = new Map<string, IDisposable>();
 
-	let { value = $bindable() }: Props = $props();
-
-	let container = $state<HTMLDivElement | null>(null);
-	let loadError = $state<string | null>(null);
-	let editor: MonacoEditor | null = null;
-	let monaco: MonacoModule | null = null;
-	let tsContribution: TsContribution | null = null;
-	let unsubscribeTheme: (() => void) | null = null;
-	let unsubscribePackages: (() => void) | null = null;
-	const typeDisposables = new Map<string, MonacoDisposable>();
-	const resolvedTypeVersions = new Map<string, string>();
-	let typeSyncRunId = 0;
-	let currentTheme = get(theme);
-
-	onMount(async () => {
-		unsubscribeTheme = theme.subscribe((nextTheme) => {
-			currentTheme = nextTheme;
-			if (monaco) {
-				monaco.editor.setTheme(nextTheme === "dark" ? "vs-dark" : "vs");
-			}
-		});
-
-		try {
-			const result = await loadMonaco();
-			monaco = result.monaco;
-			tsContribution = result.typescript;
-		} catch (error) {
-			loadError = error instanceof Error ? error.message : "Failed to load Monaco editor";
-			return;
-		}
-
-		if (!monaco) {
-			loadError = "Monaco failed to initialize";
-			return;
-		}
-
-		if (tsContribution) {
-			tsContribution.typescriptDefaults.setCompilerOptions({
-				target: tsContribution.ScriptTarget.ESNext,
-				moduleResolution: tsContribution.ModuleResolutionKind.NodeJs,
-				module: tsContribution.ModuleKind.ESNext,
-				strict: true,
-				esModuleInterop: true,
-				skipLibCheck: true,
-				allowSyntheticDefaultImports: true,
-				noEmit: true,
-			});
-
-			tsContribution.typescriptDefaults.setDiagnosticsOptions({
-				noSemanticValidation: false,
-				noSyntaxValidation: false,
-			});
-
-			tsContribution.typescriptDefaults.setEagerModelSync(false);
-		}
-
-		if (!container) {
-			loadError = "Editor container failed to initialize";
-			return;
-		}
-
-		editor = monaco.editor.create(container, {
-			value,
-			language: tsContribution ? "typescript" : "javascript",
-			theme: currentTheme === "dark" ? "vs-dark" : "vs",
-			minimap: { enabled: false },
-			fontSize: 14,
-			lineNumbers: "on",
-			scrollBeyondLastLine: false,
-			automaticLayout: true,
-			tabSize: 2,
-			wordWrap: "on",
-			padding: { top: 12 },
-		});
-
-		editor.onDidChangeModelContent(() => {
-			value = editor?.getValue() ?? value;
-		});
-
-		unsubscribePackages = packages.subscribe((pkgs) => {
-			void syncPackageTypes(pkgs);
-		});
+	onMount(() => {
+		let disposed = false;
+		loadMonaco().then(
+			(result) => {
+				if (disposed) return;
+				loaded = result;
+				const created = result.monaco.editor.create(root, {
+					value: untrack(() => value),
+					language: result.typescript ? 'typescript' : 'javascript',
+					theme: monacoTheme(untrack(() => settings.theme)),
+					fontSize: 14,
+					tabSize: 2,
+					wordWrap: 'on',
+					minimap: { enabled: false },
+					scrollBeyondLastLine: false,
+					automaticLayout: true,
+					padding: { top: 12 },
+				});
+				created.onDidChangeModelContent(() => (value = created.getValue()));
+				instance = created;
+			},
+			(caught: unknown) => {
+				if (!disposed) error = caught instanceof Error ? caught.message : 'Failed to load the editor';
+			},
+		);
+		return () => {
+			disposed = true;
+			for (const lib of libs.values()) lib.dispose();
+			libs.clear();
+			instance?.dispose();
+			instance = null;
+		};
 	});
 
-	onDestroy(() => {
-		typeSyncRunId++;
-		editor?.dispose();
-		editor = null;
-		unsubscribeTheme?.();
-		unsubscribePackages?.();
-		for (const disposable of typeDisposables.values()) {
-			disposable.dispose();
-		}
-		typeDisposables.clear();
-		resolvedTypeVersions.clear();
+	// Shared links and other outside changes.
+	$effect(() => {
+		if (instance && instance.getValue() !== value) instance.setValue(value);
 	});
 
 	$effect(() => {
-		if (!editor) return;
-		if (editor.getValue() === value) return;
-		editor.setValue(value);
+		loaded?.monaco.editor.setTheme(monacoTheme(settings.theme));
 	});
 
-	async function syncPackageTypes(pkgs: Package[]): Promise<void> {
-		if (!monaco || !tsContribution) return;
-
-		const runId = ++typeSyncRunId;
-		const installedVersions = new Map<string, string>();
-		for (const pkg of pkgs) {
-			if (pkg.status === "installed") {
-				installedVersions.set(pkg.name, pkg.version);
-			}
-		}
-
-		for (const [name, disposable] of typeDisposables.entries()) {
-			const nextVersion = installedVersions.get(name);
-			if (!nextVersion || resolvedTypeVersions.get(name) !== nextVersion) {
-				disposable.dispose();
-				typeDisposables.delete(name);
-			}
-		}
-
-		for (const [name, version] of resolvedTypeVersions.entries()) {
-			if (!installedVersions.has(name) || installedVersions.get(name) !== version) {
-				resolvedTypeVersions.delete(name);
-			}
-		}
-
-		const needsFetch = [...installedVersions.entries()].filter(
-			([name, version]) => resolvedTypeVersions.get(name) !== version,
+	$effect(() => {
+		const typescript = loaded?.typescript;
+		if (!typescript) return;
+		const installed = new Map(
+			runtime.packages.filter((entry) => entry.status === 'installed').map((entry) => [`${entry.name}@${entry.version}`, entry]),
 		);
-
-		if (needsFetch.length === 0) return;
-
-		const fetchedTypes = await Promise.all(
-			needsFetch.map(async ([name, version]) => {
-				const types = await fetchPackageTypes(name, version);
-				return { name, version, types };
-			}),
-		);
-
-		if (runId !== typeSyncRunId || !tsContribution) return;
-
-		for (const { name, version, types } of fetchedTypes) {
-			if (installedVersions.get(name) !== version) continue;
-
-			const previous = typeDisposables.get(name);
-			previous?.dispose();
-			typeDisposables.delete(name);
-
-			if (types) {
-				const disposable = tsContribution.typescriptDefaults.addExtraLib(
-					types,
-					`file:///node_modules/${name}/${version}/index.d.ts`,
-				);
-				typeDisposables.set(name, disposable);
-			}
-
-			resolvedTypeVersions.set(name, version);
+		for (const [key, lib] of libs) {
+			if (installed.has(key)) continue;
+			lib.dispose();
+			libs.delete(key);
 		}
-	}
+		for (const [key, spec] of installed) {
+			if (libs.has(key)) continue;
+			const placeholder = { dispose() {} };
+			libs.set(key, placeholder);
+			void getTypes(spec).then((types) => {
+				if (libs.get(key) !== placeholder || !types) return;
+				libs.set(key, typescript.typescriptDefaults.addExtraLib(types, `file:///node_modules/${spec.name}/index.d.ts`));
+			});
+		}
+	});
 </script>
 
-{#if loadError}
-	<div class="flex-1 min-w-0 h-full p-4 bg-bg-primary text-error">
-		{loadError}. Check your network connection and refresh.
-	</div>
-{:else}
-	<div class="flex-1 min-w-0 h-full" bind:this={container}></div>
+{#if error}
+	<p class="flex-1 p-4 text-danger" role="alert">{error}. Check your connection and reload the page.</p>
 {/if}
+<div bind:this={root} class="min-h-0 flex-1" class:hidden={error}></div>

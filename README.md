@@ -1,99 +1,47 @@
 # repl
 
-A browser-based TypeScript/JavaScript REPL powered by WebContainers.
+Run TypeScript and JavaScript, with npm packages, in a Node.js sandbox that lives in your browser tab.
 
-## Features
+## Usage
 
-- Monaco editor with TypeScript support
-- In-browser Node.js execution via WebContainers
-- NPM package installation with version picker
-- xterm.js console with ANSI colors and clickable links
-- Dark/light theme with system preference detection
-- Shareable URLs (code stored in URL hash)
-- Resizable panels
+1. Write code in the editor. TypeScript runs as-is, through [tsx](https://tsx.is).
+2. Run it. The first run boots a [WebContainer](https://webcontainers.io); output streams into the console. Runs stop after 30 seconds.
+3. Add packages by name and version (defaults to `latest`). Every install asks first, with lifecycle scripts off unless you allow them. Their type declarations load into the editor.
+4. Share. The link carries the code and installed packages in its `#hash`, so they never reach a server. Opening a shared link asks before installing its packages.
 
-## Requirements
+| Shortcut               | Action        |
+| ---------------------- | ------------- |
+| `Cmd/Ctrl + Enter`     | Run           |
+| `Cmd/Ctrl + .`         | Stop          |
+| `Cmd/Ctrl + K`         | Clear console |
+| `Cmd/Ctrl + Shift + U` | Copy link     |
 
-- Node.js 24+
-- pnpm
+## Running Locally
 
-## Setup
+Requires Node.js 24+ and pnpm.
 
 ```bash
 pnpm install --frozen-lockfile
-```
-
-## Development
-
-```bash
 pnpm dev
 ```
 
-Open http://localhost:5173
+| Command           | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| `pnpm dev`        | Start development server                         |
+| `pnpm build`      | Prerender the site into `build/`                 |
+| `pnpm preview`    | Serve `build/` with Wrangler                     |
+| `pnpm lint`       | Check lint rules and formatting                  |
+| `pnpm fmt`        | Fix lint issues and format                       |
+| `pnpm check`      | Type check                                       |
+| `pnpm test`       | Run unit tests (Vitest)                          |
+| `pnpm test:smoke` | Build, then run browser smoke tests (Playwright) |
+| `pnpm run deploy` | Build and deploy static assets to Cloudflare     |
 
-## Scripts
+Smoke tests boot a real WebContainer and install from npm, so they need network access. Install the browser once with `pnpm exec playwright install chromium`.
 
-| Command           | Description                     |
-| ----------------- | ------------------------------- |
-| `pnpm dev`        | Start development server        |
-| `pnpm build`      | Build for production            |
-| `pnpm preview`    | Preview with Wrangler locally   |
-| `pnpm run deploy` | Build and deploy to Cloudflare  |
-| `pnpm lint`       | Check formatting and lint rules |
-| `pnpm fmt`        | Format and auto-fix lint issues |
-| `pnpm check`      | Run type checking               |
-| `pnpm test:unit`  | Run unit tests (Vitest)         |
-| `pnpm test:smoke` | Run Playwright smoke test       |
+## Hosting
 
-## Testing
-
-Install Playwright Chromium once:
-
-```bash
-pnpm exec playwright install chromium
-```
-
-Run smoke tests:
-
-```bash
-pnpm test:smoke
-```
-
-## Keyboard Shortcuts
-
-| Shortcut               | Action         |
-| ---------------------- | -------------- |
-| `Cmd/Ctrl + Enter`     | Run code       |
-| `Cmd/Ctrl + .`         | Stop execution |
-| `Cmd/Ctrl + K`         | Clear console  |
-| `Cmd/Ctrl + Shift + U` | Copy share URL |
-
-## Deployment
-
-Deployed as a static-assets-only Cloudflare Worker (no server code). `pnpm build`
-prerenders the site into `build/` with `@sveltejs/adapter-static`; response headers,
-including the COOP/COEP cross-origin isolation WebContainers require, come from
-`static/_headers`. Requires:
-
-1. Cloudflare account
-2. `wrangler` CLI authenticated (`wrangler login`)
-
-```bash
-pnpm run deploy
-```
-
-## Security Notes
-
-- CSP includes `style-src 'unsafe-inline'` because Monaco and xterm rely on runtime-injected styles.
-
-## Architecture
-
-- **SvelteKit** - Framework
-- **Svelte 5** - UI with runes syntax
-- **Monaco Editor** - Code editing (CDN)
-- **xterm.js** - Terminal emulation
-- **WebContainers** - Browser-based Node.js runtime
-- **Cloudflare Workers static assets** - Edge deployment
+The site is static assets on Cloudflare Workers, with no server code. WebContainers need cross-origin isolation, so `static/_headers` sets COOP/COEP; the dev server reads the same file. The CSP is a `<meta>` tag configured in `vite.config.ts` and allows `style-src 'unsafe-inline'` because Monaco and xterm inject styles at runtime.
 
 ## License
 

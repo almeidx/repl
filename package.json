@@ -4,7 +4,6 @@
 	"private": true,
 	"type": "module",
 	"imports": {
-		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*"
 	},
 	"scripts": {
@@ -16,22 +15,18 @@
 		"dev": "vite dev",
 		"fmt": "oxlint --fix && oxfmt",
 		"lint": "svelte-kit sync && oxlint && oxfmt --check",
-		"prebuild": "svelte-kit sync",
 		"preview": "wrangler dev",
-		"test": "pnpm test:unit",
-		"test:ci": "pnpm test:unit",
+		"test": "vitest run",
+		"test:ci": "pnpm test",
 		"test:e2e": "pnpm test:smoke",
-		"test:smoke": "svelte-kit sync && playwright test --config=playwright.config.ts",
-		"test:unit": "vitest run tests/unit"
+		"test:smoke": "svelte-kit sync && playwright test",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@xterm/addon-fit": "^0.11.0",
 		"@xterm/addon-web-links": "^0.12.0",
 		"@xterm/xterm": "^6.0.0",
-		"@zag-js/collection": "^1.47.0",
 		"@zag-js/combobox": "^1.47.0",
-		"@zag-js/dialog": "^1.47.0",
-		"@zag-js/dom-query": "^1.47.0",
 		"@zag-js/svelte": "^1.47.0",
 		"monaco-editor": "^0.57.0"
 	},
